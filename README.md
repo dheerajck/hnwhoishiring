@@ -6,36 +6,27 @@ An intuitive and easy to use frontend for Hacker News Who is Hiring threads in y
 
 ## Search Query Examples
 
-- [remote](https://dheerajck.github.io/hnwhoishiring/?search=remote)
-Find jobs containing the word `remote`.
-
-- ["@gmail.com"](https://dheerajck.github.io/hnwhoishiring/?search="@gmail.com")
-Find jobs containing the exact string `"@gmail.com"`.
-
-- [rust & backend](https://dheerajck.github.io/hnwhoishiring/?search=rust+%26+backend)
-Find jobs that contain both `rust` and `backend`.
-
-- [react | flutter](https://dheerajck.github.io/hnwhoishiring/?search=react%20%7C%20flutter)
-Find jobs that contain either `react` or `flutter`.
-
-- [~us-based](https://dheerajck.github.io/hnwhoishiring/?search=~us-based)
-Find jobs that do not contain `us-based`.
-
-- [~relocate & ~"no equity"](https://dheerajck.github.io/hnwhoishiring/?search=%7Erelocate+%26+%7Eno+equity%22)
-Find jobs that do not contain both the word `relocate` and the exact string `"no equity"`.
-
-- [python | javascript & remote & ~us-based](https://dheerajck.github.io/hnwhoishiring/?search=python%20%7C%20javascript%20%26%20remote%20%26%20~us-based)
-Find jobs that contain `python` or `javascript`, and `remote`, but not `us-based`.
+| Query | Description |
+|-------|-------------|
+| [`remote`](https://dheerajck.github.io/hnwhoishiring/?search=remote) | Find jobs containing the word `remote` |
+| [`"@gmail.com"`](https://dheerajck.github.io/hnwhoishiring/?search="@gmail.com") | Find jobs containing the exact string `"@gmail.com"` |
+| [`rust & backend`](https://dheerajck.github.io/hnwhoishiring/?search=rust+%26+backend) | Find jobs that contain both `rust` and `backend` |
+| [`react \| flutter`](https://dheerajck.github.io/hnwhoishiring/?search=react%20%7C%20flutter) | Find jobs that contain either `react` or `flutter` |
+| [`~us-based`](https://dheerajck.github.io/hnwhoishiring/?search=~us-based) | Find jobs that do not contain `us-based` |
+| [`~relocate & ~"no equity"`](https://dheerajck.github.io/hnwhoishiring/?search=%7Erelocate+%26+%7Eno+equity%22) | Find jobs that do not contain both the word `relocate` and the exact string `"no equity"` |
+| [`(python \| javascript) & remote & ~us-based`](https://dheerajck.github.io/hnwhoishiring/?search=python%20%7C%20javascript%20%26%20remote%20%26%20~us-based) | Find jobs that contain `python` or `javascript`, and `remote`, but not `us-based` |
 
 ## Keyboard shortcuts
 
-- `j` – navigate downwards to next job
-- `k` – navigate upwards to previous job
-- `/` – focus search
-- `Esc` – cancel focus
-- `a` – toggle favourite job
-- `e` – toggle exclude job
-- `g` – scroll to top
+| Key | Action |
+|-----|--------|
+| `j` | Navigate downwards to next job |
+| `k` | Navigate upwards to previous job |
+| `/` | Focus on search |
+| `Esc` | Exit search |
+| `a` | Toggle favourite |
+| `e` | Toggle exclude |
+| `g` | Scroll to top |
 
 ## Notes
 
