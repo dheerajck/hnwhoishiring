@@ -33,3 +33,19 @@ An intuitive and easy to use frontend for Hacker News Who is Hiring threads in y
 - I did use — purposefully because I like the way it looks right now :)
 - It is completely local, except I use GoatCounter for simple, privacy-friendly analytics.
 - It supports PWA, so you can install it on desktop or mobile.
+
+## Run locally
+
+- Serve the folder over HTTP (needed for ES modules and fetch):
+
+```bash
+# from the project root (where this README is)
+python3 -m http.server 8000
+# then open http://localhost:8000
+```
+
+- To run with built-in mock data (no network calls), open `js/config.js` and set:
+
+```js
+export const USE_MOCK_DATA = true;
+```
