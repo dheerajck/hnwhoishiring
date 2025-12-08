@@ -61,6 +61,8 @@ function cacheDOMElements() {
 const debouncedRenderJobs = debounce(() => {
   if (typeof allComments !== "undefined") {
     renderJobs(allComments);
+    // Update the URL/search param only when the debounced search actually runs
+    updateSearchURLParams();
   }
 }, searchDebounceTimeout);
 
@@ -106,7 +108,6 @@ function setupSearchInput() {
 
   searchInput.addEventListener("input", () => {
     debouncedRenderJobs();
-    updateSearchURLParams();
   });
 }
 
