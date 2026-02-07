@@ -394,6 +394,28 @@ export function renderParsedQuery(tokens) {
   });
 }
 
+// Preserve original load-time-info text but append search results when query present
+function appendSearchResultsCount(query, filteredCount) {
+  try {
+    const el = document.getElementById("load-time-info");
+    if (!el) return;
+    // Remove any previous ' | Search results: ...' suffix to keep idempotent
+    const baseText = el.textContent.replace(/\s*\|\s*Search results:\s*\d+$/i, "");
+    if (query && query.trim().length > 0) {
+      if (baseText && baseText.trim().length > 0) {
+        el.textContent = `${baseText} | Search results: ${filteredCount}`;
+      } else {
+        el.textContent = `Search results: ${filteredCount}`;
+      }
+    } else {
+      // If no query, restore base message (do not append)
+      el.textContent = baseText;
+    }
+  } catch (e) {
+    console.error('Failed to update search results count', e);
+  }
+}
+
 export function renderJobs(commentsToRender) {
   const container = document.getElementById("jobs");
   const query = document.getElementById("search").value;
@@ -473,6 +495,9 @@ export function renderJobs(commentsToRender) {
       );
     });
   }
+
+  // Update load-time-info with filtered count when a query is active
+  appendSearchResultsCount(query, filteredComments.length);
 
   if (filteredComments.length === 0) {
     let message = "No matches found!";
