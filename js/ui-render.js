@@ -530,6 +530,11 @@ export function renderJobs(commentsToRender) {
     }
 
     let commentTextHTML = c.text || "[No comment text]";
+
+    if (window.DOMPurify) {
+      commentTextHTML = DOMPurify.sanitize(commentTextHTML);
+    }
+
     commentTextHTML = addTargetBlankToLinks(commentTextHTML);
     if (queryTokens.length > 0) {
       commentTextHTML = highlightSearchTerms(commentTextHTML, queryTokens);
