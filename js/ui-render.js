@@ -21,6 +21,20 @@ import { loadThread } from "./thread-manager.js";
 
 export const highlightClass = "active";
 
+// Adds target="_blank" and rel="noopener noreferrer" to all links in HTML content
+function addTargetBlankToLinks(html) {
+  if (!html) return html;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstChild;
+  const links = root.querySelectorAll("a");
+  links.forEach((link) => {
+    link.setAttribute("target", "_blank");
+    link.setAttribute("rel", "noopener noreferrer");
+  });
+  return root.innerHTML;
+}
+
 // Highlights search terms in visible text only, preserving HTML structure
 // - Uses DOMParser to parse the HTML string into a DOM tree
 // - Walks the tree, applying regex-based highlighting only to text nodes
@@ -541,6 +555,12 @@ export function renderJobs(commentsToRender) {
     }
 
     let commentTextHTML = c.text || "[No comment text]";
+
+    if (window.DOMPurify) {
+      commentTextHTML = DOMPurify.sanitize(commentTextHTML);
+    }
+
+    commentTextHTML = addTargetBlankToLinks(commentTextHTML);
     if (queryTokens.length > 0) {
       commentTextHTML = highlightSearchTerms(commentTextHTML, queryTokens);
     }
