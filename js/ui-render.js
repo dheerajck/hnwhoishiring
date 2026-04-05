@@ -139,6 +139,59 @@ export function showToast(message, duration = toastTimeout) {
   setActiveToastHideTimerId(newTimerId);
 }
 
+function formatRelativeRefreshTime(timestampMs) {
+  const diffMs = Date.now() - timestampMs;
+
+  if (diffMs < 60 * 1000) {
+    return "just now";
+  }
+
+  const diffMinutes = Math.floor(diffMs / (60 * 1000));
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hr${diffHours === 1 ? "" : "s"} ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+}
+
+export function setLoadTimeInfo(message = "") {
+  const el = document.getElementById("load-time-info");
+  if (!el) return;
+  el.textContent = message;
+}
+
+export function setLastRefreshedInfo(timestampMs) {
+  const el = document.getElementById("last-refreshed-info");
+  if (!el) return;
+
+  if (!timestampMs) {
+    el.textContent = "";
+    return;
+  }
+
+  const formattedTime = new Date(timestampMs).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  el.textContent = `Last refreshed: ${formattedTime} (${formatRelativeRefreshTime(
+    timestampMs
+  )})`;
+}
+
+export function clearLastRefreshedInfo() {
+  setLastRefreshedInfo(null);
+}
+
 export function updateJobCardInPlace(jobId, appliedStatus) {
   const jobCard = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
   if (!jobCard) return;
@@ -273,7 +326,8 @@ export function renderCategorySwitcher() {
             "jobs"
           ).innerHTML = `<div class="loading"><i class="fas fa-info-circle"></i> No threads found for this category.</div>`;
           // setCurrentThreadId(null); // Handled by loadThread or its absence
-          document.getElementById("load-time-info").textContent = "";
+          setLoadTimeInfo("");
+          clearLastRefreshedInfo();
         }
       }
     });

@@ -1,17 +1,25 @@
 import { initUIEventListeners } from "./ui-events.js";
-import { fetchAndStoreThreads } from "./thread-manager.js";
+import { fetchAndStoreThreads, refreshActiveView } from "./thread-manager.js";
 import { CATEGORY_API_MAP } from "./config.js";
 import { setCurrentCategory } from "./state.js";
 import { showToast } from "./ui-render.js";
 
-function initializeApp() {
-  // 0. Check for category, search, and filter in query parameters and set them if present
+const RESUME_REFRESH_THROTTLE_MS = 15000;
+
+let lifecycleListenersBound = false;
+let appBootInProgress = false;
+let appBootCompleted = false;
+let lastResumeRefreshAt = 0;
+let resumeRefreshPromise = null;
+
+function applyInitialUrlState() {
   const params = new URLSearchParams(window.location.search);
   const categoryParam = params.get("category");
   const searchParam = params.get("search") || "";
   const filterParam = params.get("filter") || "";
   let selectedCategory = "hiring";
   let invalidCategory = false;
+
   if (categoryParam) {
     if (CATEGORY_API_MAP[categoryParam]) {
       selectedCategory = categoryParam;
@@ -19,7 +27,9 @@ function initializeApp() {
       invalidCategory = true;
     }
   }
+
   setCurrentCategory(selectedCategory);
+
   if (invalidCategory) {
     showToast(
       `Invalid category: '${categoryParam}'. Showing 'hiring' instead.`,
@@ -27,22 +37,86 @@ function initializeApp() {
     );
   }
 
-  // Set search input and filter button if present in URL
   window.__initialSearchParam = searchParam;
   window.__initialFilterParam = filterParam;
-
-  // 1. Initialize all UI event listeners
-  // This also handles initial renderParsedQuery if search input has value
-  // and sets up render functions for thread-manager internally if still needed by it (which it isn't)
-  initUIEventListeners();
-
-  // 2. Fetch initial thread data for all categories
-  // This will internally trigger rendering of category switcher, thread switcher, and jobs for the default/latest thread
-  // as thread-manager.js now directly imports its rendering dependencies from ui-render.js
-  fetchAndStoreThreads();
-
-  // console.log("Application initialized.");
 }
 
-// Start the application
+function bindLifecycleListeners() {
+  if (lifecycleListenersBound) {
+    return;
+  }
+  lifecycleListenersBound = true;
+
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted && !appBootCompleted) {
+      return;
+    }
+
+    scheduleResumeRefresh("pageshow");
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      scheduleResumeRefresh("visibilitychange");
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    scheduleResumeRefresh("focus");
+  });
+
+  window.addEventListener("online", () => {
+    scheduleResumeRefresh("online");
+  });
+}
+
+async function scheduleResumeRefresh(source) {
+  if (appBootInProgress) {
+    return;
+  }
+
+  if (source !== "online" && document.visibilityState === "hidden") {
+    return;
+  }
+
+  if (resumeRefreshPromise) {
+    return resumeRefreshPromise;
+  }
+
+  const now = Date.now();
+  if (
+    source !== "online" &&
+    now - lastResumeRefreshAt < RESUME_REFRESH_THROTTLE_MS
+  ) {
+    return;
+  }
+
+  lastResumeRefreshAt = now;
+  resumeRefreshPromise = refreshActiveView()
+    .catch((error) => {
+      console.error(`Failed to refresh app after ${source}:`, error);
+    })
+    .finally(() => {
+      resumeRefreshPromise = null;
+    });
+
+  return resumeRefreshPromise;
+}
+
+async function initializeApp() {
+  applyInitialUrlState();
+  initUIEventListeners();
+  bindLifecycleListeners();
+
+  appBootInProgress = true;
+
+  try {
+    await fetchAndStoreThreads();
+  } finally {
+    appBootInProgress = false;
+    appBootCompleted = true;
+    lastResumeRefreshAt = Date.now();
+  }
+}
+
 initializeApp();
