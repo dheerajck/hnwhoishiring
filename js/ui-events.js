@@ -41,6 +41,7 @@ import { parseQuery } from "./search-logic.js";
 
 // DOM Elements Cache
 let domElements = {};
+let uiEventListenersInitialized = false;
 
 function cacheDOMElements() {
   domElements = {
@@ -707,6 +708,11 @@ function applyInitialURLParams() {
 
 // Main initialization
 export function initUIEventListeners() {
+  if (uiEventListenersInitialized) {
+    return;
+  }
+  uiEventListenersInitialized = true;
+
   cacheDOMElements();
   setupClearSearchButton();
   setupSearchInput();

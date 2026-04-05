@@ -652,6 +652,28 @@ hr.category-divider {
   background-color: var(--border); /* Or your desired line color */
 }
 
+.status-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+}
+
+#load-time-info,
+#last-refreshed-info {
+  min-height: 1.1rem;
+}
+
+#load-time-info {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+#last-refreshed-info {
+  font-size: 0.8rem;
+  color: #7f8790;
+}
+
 .year-selector,
 .month-selector {
   display: flex;

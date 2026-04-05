@@ -4,7 +4,6 @@ import {
   allThreads,
   currentCategory,
   currentThreadId,
-  allComments,
   setAllThreads,
   setCurrentThreadId,
   setAllComments,
@@ -21,245 +20,436 @@ import {
 } from "./api.js";
 
 import {
+  clearLastRefreshedInfo,
   renderJobs,
   renderCategorySwitcher,
   renderThreadSwitcher,
+  setLastRefreshedInfo,
+  setLoadTimeInfo,
 } from "./ui-render.js";
 
-export async function loadThread(id) {
-  const startTime = performance.now();
-  const requestedIdForThisCall = id; // Capture the ID for this specific call
+let activeThreadRequestToken = 0;
+let activeCategoryRefreshPromise = null;
+let activeInitialLoadPromise = null;
 
-  setCurrentThreadId(id);
-  document.getElementById(
-    "jobs"
-  ).innerHTML = `<div class="loading"><i class="fas fa-circle-notch"></i> Loading...</div>`;
-  document.getElementById("load-time-info").textContent = "";
+function isCurrentThreadRequest(threadId, requestToken) {
+  return (
+    String(threadId) === String(currentThreadId) &&
+    requestToken === activeThreadRequestToken
+  );
+}
 
+function getJobsContainer() {
+  return document.getElementById("jobs");
+}
+
+function hasRenderableJobs() {
+  return !!document.querySelector("#jobs .job-card");
+}
+
+function isJobsContainerInErrorState() {
+  return /Failed to load/i.test(getJobsContainer()?.textContent || "");
+}
+
+function setThreadButtonsActive(threadId) {
   document
     .querySelectorAll(".year-selector button, .month-selector button")
     .forEach((btn) => {
       btn.classList.remove("active");
-      if (btn.dataset.threadId === String(requestedIdForThisCall)) {
+
+      if (btn.dataset.threadId === String(threadId)) {
         btn.classList.add("active");
 
         const yearBtn = document.querySelector(
           `.year-selector button[data-year="${btn.dataset.year}"]`
         );
-        yearBtn.classList.add("active");
+        yearBtn?.classList.add("active");
       }
     });
+}
 
-  const cacheKey = `hn_thread_comments_${requestedIdForThisCall}`;
-  let lastCachedTimestampMs = 0;
+function showBlockingThreadLoader() {
+  getJobsContainer().innerHTML =
+    '<div class="loading"><i class="fas fa-circle-notch"></i> Loading...</div>';
+  setLoadTimeInfo("");
+  clearLastRefreshedInfo();
+}
+
+function showNoThreadsMessage(message) {
+  getJobsContainer().innerHTML = `<div class="loading"><i class="fas fa-info-circle"></i> ${message}</div>`;
+  setLoadTimeInfo("");
+  clearLastRefreshedInfo();
+}
+
+function getThreadCacheKey(threadId) {
+  return `hn_thread_comments_${threadId}`;
+}
+
+function normalizeCategoryCache(cachedData) {
+  if (!cachedData) {
+    return null;
+  }
+
+  return cachedData.threads || cachedData;
+}
+
+function buildThreadsState(source = {}) {
+  const nextThreads = {};
+
+  for (const category in CATEGORY_API_MAP) {
+    nextThreads[category] = Array.isArray(source[category])
+      ? source[category]
+      : [];
+  }
+
+  return nextThreads;
+}
+
+function getLatestThreadForCategory(category = currentCategory) {
+  return allThreads[category]?.[0] || null;
+}
+
+function setSelectedYearForThread(thread) {
+  if (!thread) {
+    setSelectedYear(null);
+    return;
+  }
+
+  const match = thread.title.match(/\b(\d{4})\b/);
+  setSelectedYear(match ? parseInt(match[1], 10) : null);
+}
+
+function areThreadListsEqual(first = [], second = []) {
+  return JSON.stringify(first) === JSON.stringify(second);
+}
+
+function hasKnownThreads() {
+  return Object.values(allThreads).some(
+    (threads) => Array.isArray(threads) && threads.length > 0
+  );
+}
+
+async function fetchCategoryThreadLists() {
+  const categories = Object.keys(CATEGORY_API_MAP);
+
+  return Promise.all(
+    categories.map(async (category) => {
+      try {
+        const hits = await fetchLatestThreadListFromApi(CATEGORY_API_MAP[category]);
+        return { category, hits };
+      } catch (error) {
+        console.error(`Error fetching threads for category ${category}:`, error);
+        return { category, hits: null };
+      }
+    })
+  );
+}
+
+export async function loadThread(id, options = {}) {
+  const { preserveVisibleContent = false } = options;
+  const startTime = performance.now();
+  const requestedIdForThisCall = id;
+  const requestToken = ++activeThreadRequestToken;
+  const isReloadingCurrentThread = String(currentThreadId) === String(id);
+  const keepVisibleContent =
+    preserveVisibleContent &&
+    isReloadingCurrentThread &&
+    hasRenderableJobs() &&
+    !isJobsContainerInErrorState();
+
+  setCurrentThreadId(id);
+  setThreadButtonsActive(requestedIdForThisCall);
+
+  if (!keepVisibleContent) {
+    showBlockingThreadLoader();
+  }
+
+  const cacheKey = getThreadCacheKey(requestedIdForThisCall);
 
   try {
     const cachedData = getCache(cacheKey);
     let commentsForThisRequest = [];
 
-    if (cachedData && cachedData.comments && cachedData.cachedAt) {
-      commentsForThisRequest = cachedData.comments || [];
-      lastCachedTimestampMs = cachedData.cachedAt;
+    if (
+      cachedData &&
+      Array.isArray(cachedData.comments) &&
+      cachedData.cachedAt
+    ) {
+      commentsForThisRequest = cachedData.comments;
 
-      if (requestedIdForThisCall !== currentThreadId) return;
+      if (!isCurrentThreadRequest(requestedIdForThisCall, requestToken)) {
+        return false;
+      }
 
       setAllComments(commentsForThisRequest);
-      renderJobs(allComments);
-      const cachedCount = allComments.length;
-      document.getElementById(
-        "load-time-info"
-      ).textContent = `Displayed ${cachedCount} job posts. Checking for updates...`;
+      if (!keepVisibleContent) {
+        renderJobs(commentsForThisRequest);
+      }
+      setLastRefreshedInfo(cachedData.cachedAt);
+      setLoadTimeInfo(
+        `Displayed ${commentsForThisRequest.length} job posts. Checking for updates...`
+      );
 
-      let fetchedHits = await fetchNewerComments(
+      const fetchedHits = await fetchNewerComments(
         requestedIdForThisCall,
-        lastCachedTimestampMs
+        cachedData.cachedAt
       );
 
-      if (requestedIdForThisCall !== currentThreadId) return;
+      if (!isCurrentThreadRequest(requestedIdForThisCall, requestToken)) {
+        return false;
+      }
 
-      let newTopLevelComments = fetchedHits.filter(
-        (comment) =>
-          String(comment.parent_id) === String(requestedIdForThisCall)
-      );
-
-      newTopLevelComments = newTopLevelComments.map((comment) => ({
-        ...comment,
-        id: comment.id || comment.objectID,
-        text: comment.text || comment.comment_text,
-      }));
+      let newTopLevelComments = fetchedHits
+        .filter(
+          (comment) =>
+            String(comment.parent_id) === String(requestedIdForThisCall)
+        )
+        .map((comment) => ({
+          ...comment,
+          id: comment.id || comment.objectID,
+          text: comment.text || comment.comment_text,
+        }));
 
       let uniqueNewComments = [];
       if (newTopLevelComments.length > 0) {
         const existingCommentIds = new Set(
-          commentsForThisRequest.map((c) => String(c.id))
+          commentsForThisRequest.map((comment) => String(comment.id))
         );
+
         uniqueNewComments = newTopLevelComments.filter(
-          (nc) => nc.id && !existingCommentIds.has(String(nc.id))
+          (comment) =>
+            comment.id && !existingCommentIds.has(String(comment.id))
         );
+
         commentsForThisRequest = [
           ...uniqueNewComments,
           ...commentsForThisRequest,
         ];
-        const minimizedCommentsForCache = commentsForThisRequest.map(
-          minimizeCommentObject
-        );
-        setCache(cacheKey, {
-          comments: minimizedCommentsForCache,
-          cachedAt: Date.now(),
-        });
       }
 
-      if (uniqueNewComments.length > 0) {
-        setAllComments(commentsForThisRequest);
-        renderJobs(allComments);
-      }
-
-      const endTime = performance.now();
-      const duration = ((endTime - startTime) / 1000).toFixed(2);
-      document.getElementById(
-        "load-time-info"
-      ).textContent = `Loaded ${commentsForThisRequest.length} jobs (${uniqueNewComments.length} new jobs added) in ${duration} seconds`;
-    } else {
-      commentsForThisRequest = await fetchThreadComments(
-        requestedIdForThisCall
-      );
-
-      if (requestedIdForThisCall !== currentThreadId) return;
-
-      const minimizedCommentsForCache = commentsForThisRequest.map(
-        minimizeCommentObject
-      );
-
+      const refreshedAt = Date.now();
       setCache(cacheKey, {
-        comments: minimizedCommentsForCache,
-        cachedAt: Date.now(),
+        comments: commentsForThisRequest.map(minimizeCommentObject),
+        cachedAt: refreshedAt,
       });
 
       setAllComments(commentsForThisRequest);
-      renderJobs(allComments);
+      if (uniqueNewComments.length > 0) {
+        renderJobs(commentsForThisRequest);
+      }
 
-      const endTime = performance.now();
-      const duration = ((endTime - startTime) / 1000).toFixed(2);
-      document.getElementById(
-        "load-time-info"
-      ).textContent = `Loaded ${allComments.length} jobs in ${duration} seconds`;
+      const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+      setLastRefreshedInfo(refreshedAt);
+      setLoadTimeInfo(
+        `Loaded ${commentsForThisRequest.length} jobs (${uniqueNewComments.length} new jobs added) in ${duration} seconds`
+      );
+
+      return true;
     }
-  } catch (error) {
-    if (requestedIdForThisCall !== currentThreadId) return;
 
-    document.getElementById("jobs").innerHTML = `
+    commentsForThisRequest = await fetchThreadComments(requestedIdForThisCall);
+
+    if (!isCurrentThreadRequest(requestedIdForThisCall, requestToken)) {
+      return false;
+    }
+
+    const refreshedAt = Date.now();
+    setCache(cacheKey, {
+      comments: commentsForThisRequest.map(minimizeCommentObject),
+      cachedAt: refreshedAt,
+    });
+
+    setAllComments(commentsForThisRequest);
+    renderJobs(commentsForThisRequest);
+
+    const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+    setLastRefreshedInfo(refreshedAt);
+    setLoadTimeInfo(
+      `Loaded ${commentsForThisRequest.length} jobs in ${duration} seconds`
+    );
+
+    return true;
+  } catch (error) {
+    if (!isCurrentThreadRequest(requestedIdForThisCall, requestToken)) {
+      return false;
+    }
+
+    if (keepVisibleContent && hasRenderableJobs()) {
+      setLoadTimeInfo("Failed to refresh jobs");
+      return false;
+    }
+
+    getJobsContainer().innerHTML = `
           <div class="loading">
             <i class="fas fa-exclamation-circle"></i>
             Failed to load thread details for ${requestedIdForThisCall}. ${
       error.message || ""
     }
           </div>`;
-    document.getElementById(
-      "load-time-info"
-    ).textContent = `Failed to load jobs`;
+    setLoadTimeInfo("Failed to load jobs");
+    clearLastRefreshedInfo();
+
+    return false;
   }
 }
 
 async function fetchAllCategoryThreads() {
-  const promises = [];
-  for (const category in CATEGORY_API_MAP) {
-    promises.push(
-      fetchLatestThreadListFromApi(CATEGORY_API_MAP[category])
-        .then((hits) => ({ category, hits })) // Store category along with hits
-        .catch((error) => {
-          console.error(
-            `Error fetching threads for category ${category}:`,
-            error
-          );
-          return { category, hits: [] }; // Return category and empty hits on error
-        })
-    );
+  const results = await fetchCategoryThreadLists();
+  const nextThreads = buildThreadsState();
+
+  for (const result of results) {
+    nextThreads[result.category] = result.hits || [];
   }
 
-  try {
-    const resolvedResults = await Promise.all(promises);
-    for (const result of resolvedResults) {
-      allThreads[result.category] = result.hits;
-    }
-  } catch (error) {
-    console.error(
-      "Error fetching one or more category threads in parallel:",
-      error
-    );
-  }
-  setCache(CATEGORY_CACHE_KEY, allThreads);
+  setAllThreads(nextThreads);
+  setCache(CATEGORY_CACHE_KEY, nextThreads);
+
+  return nextThreads;
 }
 
-async function fetchLatestCategoryThreadsInBackground() {
-  let updated = false;
+async function fetchLatestCategoryThreadsInBackground({
+  allowThreadPromotion = false,
+} = {}) {
+  if (activeCategoryRefreshPromise) {
+    return activeCategoryRefreshPromise;
+  }
 
-  const currentCachedThreads = { ...allThreads };
+  activeCategoryRefreshPromise = (async () => {
+    const cachedThreadsSnapshot = buildThreadsState(allThreads);
+    const previousLatestThreadId =
+      cachedThreadsSnapshot[currentCategory]?.[0]?.objectID || null;
+    const results = await fetchCategoryThreadLists();
+    const nextThreads = buildThreadsState(cachedThreadsSnapshot);
+    let updated = false;
 
-  for (const category in CATEGORY_API_MAP) {
-    try {
-      let latestHits;
-
-      latestHits = await fetchLatestThreadListFromApi(
-        CATEGORY_API_MAP[category]
-      );
-
+    for (const result of results) {
       if (
-        latestHits.length > 0 &&
-        JSON.stringify(latestHits) !==
-          JSON.stringify(currentCachedThreads[category])
+        Array.isArray(result.hits) &&
+        !areThreadListsEqual(result.hits, cachedThreadsSnapshot[result.category])
       ) {
-        allThreads[category] = latestHits;
+        nextThreads[result.category] = result.hits;
         updated = true;
       }
-    } catch (error) {
-      console.error(`Background fetch failed for category ${category}:`, error);
     }
-  }
-  if (updated) {
-    setCache(CATEGORY_CACHE_KEY, allThreads);
-    renderCategorySwitcher();
-    renderThreadSwitcher();
-  }
+
+    if (updated) {
+      setAllThreads(nextThreads);
+      setCache(CATEGORY_CACHE_KEY, nextThreads);
+      renderCategorySwitcher();
+    }
+
+    const latestThreadAfterRefresh = nextThreads[currentCategory]?.[0] || null;
+    const shouldPromoteLatestThread =
+      allowThreadPromotion &&
+      latestThreadAfterRefresh &&
+      String(latestThreadAfterRefresh.objectID) !==
+        String(previousLatestThreadId) &&
+      (!currentThreadId ||
+        String(currentThreadId) === String(previousLatestThreadId));
+
+    if (updated) {
+      if (
+        shouldPromoteLatestThread ||
+        !nextThreads[currentCategory]?.some(
+          (thread) => String(thread.objectID) === String(currentThreadId)
+        )
+      ) {
+        setSelectedYearForThread(latestThreadAfterRefresh);
+      }
+
+      renderThreadSwitcher();
+    }
+
+    if (shouldPromoteLatestThread) {
+      await loadThread(latestThreadAfterRefresh.objectID);
+      return {
+        updated,
+        promotedThreadId: latestThreadAfterRefresh.objectID,
+      };
+    }
+
+    return { updated, promotedThreadId: null };
+  })().finally(() => {
+    activeCategoryRefreshPromise = null;
+  });
+
+  return activeCategoryRefreshPromise;
 }
 
 export async function fetchAndStoreThreads() {
-  const cachedData = getCache(CATEGORY_CACHE_KEY);
+  if (activeInitialLoadPromise) {
+    return activeInitialLoadPromise;
+  }
 
-  if (cachedData) {
-    setAllThreads(cachedData);
-    renderCategorySwitcher();
+  activeInitialLoadPromise = (async () => {
+    const cachedData = normalizeCategoryCache(getCache(CATEGORY_CACHE_KEY));
 
-    const latestThread = allThreads[currentCategory][0];
-    if (latestThread) {
-      const match = latestThread.title.match(/\b(\d{4})\b/);
-      setSelectedYear(match ? parseInt(match[1]) : null);
-      renderThreadSwitcher();
-      await loadThread(latestThread.objectID);
-    } else {
-      document.getElementById(
-        "jobs"
-      ).innerHTML = `<div class="loading"><i class="fas fa-info-circle"></i> No threads found in cache for "${CATEGORY_API_MAP[currentCategory].label}". Checking for new ones...</div>`;
+    if (cachedData) {
+      setAllThreads(buildThreadsState(cachedData));
+      renderCategorySwitcher();
+
+      const latestThread = getLatestThreadForCategory(currentCategory);
+      if (latestThread) {
+        setSelectedYearForThread(latestThread);
+        renderThreadSwitcher();
+        await loadThread(latestThread.objectID);
+      } else {
+        showNoThreadsMessage(
+          `No threads found in cache for "${CATEGORY_API_MAP[currentCategory].label}". Checking for new ones...`
+        );
+      }
+
+      setInitialThreadsLoadingCompleted(true);
+      fetchLatestCategoryThreadsInBackground({ allowThreadPromotion: true });
+      return;
     }
 
-    setInitialThreadsLoadingCompleted(true);
-    fetchLatestCategoryThreadsInBackground();
-  } else {
-    document.getElementById(
-      "jobs"
-    ).innerHTML = `<div class="loading"><i class="fas fa-circle-notch"></i> Loading...</div>`;
+    showBlockingThreadLoader();
     await fetchAllCategoryThreads();
     renderCategorySwitcher();
-    const latestThread = allThreads[currentCategory][0];
+
+    const latestThread = getLatestThreadForCategory(currentCategory);
     if (latestThread) {
-      const match = latestThread.title.match(/\b(\d{4})\b/);
-      setSelectedYear(match ? parseInt(match[1]) : null);
+      setSelectedYearForThread(latestThread);
       renderThreadSwitcher();
       await loadThread(latestThread.objectID);
     } else {
-      document.getElementById(
-        "jobs"
-      ).innerHTML = `<div class="loading"><i class="fas fa-info-circle"></i> No threads found for "${CATEGORY_API_MAP[currentCategory].label}".</div>`;
+      showNoThreadsMessage(
+        `No threads found for "${CATEGORY_API_MAP[currentCategory].label}".`
+      );
     }
+
     setInitialThreadsLoadingCompleted(true);
+  })().finally(() => {
+    activeInitialLoadPromise = null;
+  });
+
+  return activeInitialLoadPromise;
+}
+
+export async function refreshActiveView() {
+  if (!hasKnownThreads()) {
+    await fetchAndStoreThreads();
+    return;
   }
+
+  const { promotedThreadId } = await fetchLatestCategoryThreadsInBackground({
+    allowThreadPromotion: true,
+  });
+
+  if (promotedThreadId) {
+    return;
+  }
+
+  const fallbackThreadId =
+    currentThreadId || getLatestThreadForCategory(currentCategory)?.objectID;
+
+  if (!fallbackThreadId) {
+    showNoThreadsMessage(
+      `No threads found for "${CATEGORY_API_MAP[currentCategory].label}".`
+    );
+    return;
+  }
+
+  await loadThread(fallbackThreadId, { preserveVisibleContent: true });
 }
