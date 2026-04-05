@@ -233,15 +233,15 @@ export const CATEGORY_API_MAP = {
     query: '"Ask HN: Who wants to be hired?"',
     tags: "ask_hn",
     label: "Who Wants to be Hired?",
-    example_query: "dheerajck18@gmail.com & python",
-    placeholder: "dheerajck18@gmail.com & python",
+    example_query: "dheerajck18+hn@gmail.com & python",
+    placeholder: "dheerajck18+hn@gmail.com & python",
   },
   freelance: {
     query: '"Ask HN: Freelancer?"',
     tags: "ask_hn",
     label: "Freelancer? Seeking freelancer?",
-    example_query: "dheerajck18@gmail.com & python",
-    placeholder: "dheerajck18@gmail.com & python",
+    example_query: "dheerajck18+hn@gmail.com & python",
+    placeholder: "dheerajck18+hn@gmail.com & python",
   },
 };
 

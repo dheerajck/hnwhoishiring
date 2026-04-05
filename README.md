@@ -6,6 +6,8 @@ An intuitive and easy to use frontend for Hacker News Who is Hiring threads in y
 
 ## Search Query Examples
 
+Search expressions are evaluated left-to-right. Parentheses are not supported.
+
 | Query | Description |
 |-------|-------------|
 | [`remote`](https://dheerajck.github.io/hnwhoishiring/?search=remote) | Find jobs containing the word `remote` |
@@ -13,8 +15,8 @@ An intuitive and easy to use frontend for Hacker News Who is Hiring threads in y
 | [`rust & backend`](https://dheerajck.github.io/hnwhoishiring/?search=rust+%26+backend) | Find jobs that contain both `rust` and `backend` |
 | [`react \| flutter`](https://dheerajck.github.io/hnwhoishiring/?search=react%20%7C%20flutter) | Find jobs that contain either `react` or `flutter` |
 | [`~us-based`](https://dheerajck.github.io/hnwhoishiring/?search=~us-based) | Find jobs that do not contain `us-based` |
-| [`~relocate & ~"no equity"`](https://dheerajck.github.io/hnwhoishiring/?search=%7Erelocate+%26+%7Eno+equity%22) | Find jobs that do not contain both the word `relocate` and the exact string `"no equity"` |
-| [`(python \| javascript) & remote & ~us-based`](https://dheerajck.github.io/hnwhoishiring/?search=python%20%7C%20javascript%20%26%20remote%20%26%20~us-based) | Find jobs that contain `python` or `javascript`, and `remote`, but not `us-based` |
+| [`~relocate & ~"no equity"`](https://dheerajck.github.io/hnwhoishiring/?search=%7Erelocate+%26+%7E%22no%20equity%22) | Find jobs that do not contain both the word `relocate` and the exact string `"no equity"` |
+| [`python \| javascript & remote & ~us-based`](https://dheerajck.github.io/hnwhoishiring/?search=python%20%7C%20javascript%20%26%20remote%20%26%20~us-based) | Find jobs containing `python` or `javascript`, then filtered further left-to-right by `remote` and not `us-based` |
 
 ## Keyboard shortcuts
 

@@ -390,19 +390,6 @@ function getStateForThread(stateObj) {
   return stateObj[currentThreadId];
 }
 
-function shouldRerenderJobs() {
-  const activeFilters = [
-    "showFavorites",
-    "showNotes",
-    "showApplied",
-    "hideApplied",
-    "showHidden",
-  ];
-  return activeFilters.some((id) =>
-    document.getElementById(id)?.classList.contains(HIGHLIGHT_CLASS)
-  );
-}
-
 const jobCardActions = {
   star: handleStarAction,
   "copy-link": handleCopyLinkAction,
