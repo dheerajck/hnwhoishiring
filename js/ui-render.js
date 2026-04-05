@@ -15,7 +15,12 @@ import {
   setActiveToastHideTimerId,
 } from "./state.js";
 
-import { parseQuery, evaluateQuery } from "./search-logic.js";
+import {
+  parseQuery,
+  evaluateQuery,
+  buildWordMatchPattern,
+  escapeRegex,
+} from "./search-logic.js";
 import { getYearAndMonthFromTitle } from "./utils.js";
 import { loadThread } from "./thread-manager.js";
 
@@ -78,8 +83,7 @@ function highlightSearchTerms(text, queryTokens) {
       if (replaced.trim() !== "") {
         // Build regex for each term: exact match = substring, else = whole word
         const regexParts = termsToHighlight.map(({ term, isExactMatch }) => {
-          const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          return isExactMatch ? escaped : `\\b${escaped}\\b`;
+          return isExactMatch ? escapeRegex(term) : buildWordMatchPattern(term);
         });
         if (regexParts.length === 0) return;
         const regex = new RegExp(`(${regexParts.join("|")})`, "gi");

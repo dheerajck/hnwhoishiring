@@ -1,3 +1,28 @@
+const REGEX_SPECIAL_CHARS = /[.*+?^${}()|[\]\\]/g;
+const WORD_CHAR_REGEX = /\w/;
+
+export function escapeRegex(term) {
+  return term.replace(REGEX_SPECIAL_CHARS, "\\$&");
+}
+
+export function buildWordMatchPattern(term) {
+  if (!term) {
+    return "";
+  }
+
+  let pattern = escapeRegex(term);
+
+  if (WORD_CHAR_REGEX.test(term[0])) {
+    pattern = `\\b${pattern}`;
+  }
+
+  if (WORD_CHAR_REGEX.test(term[term.length - 1])) {
+    pattern = `${pattern}\\b`;
+  }
+
+  return pattern;
+}
+
 // New parseQuery function - Treats single words as words, multi-word as phrases
 export function parseQuery(queryString) {
   const tokens = [];
@@ -105,10 +130,7 @@ export function checkTerm(token, commentText, author, noteText) {
   } else {
     // Whole word match (using regex)
     try {
-      // Escape special regex characters in the term
-      const escapedTerm = actualTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      // \b ensures matching whole words
-      const regex = new RegExp(`\\b${escapedTerm}\\b`);
+      const regex = new RegExp(buildWordMatchPattern(actualTerm));
       termFound =
         regex.test(commentText) || regex.test(author) || regex.test(noteText);
     } catch (e) {
@@ -116,8 +138,8 @@ export function checkTerm(token, commentText, author, noteText) {
       console.error(`Regex error for term "${actualTerm}":`, e);
       termFound =
         commentText.includes(actualTerm) ||
-        regex.test(author) ||
-        regex.test(noteText);
+        author.includes(actualTerm) ||
+        noteText.includes(actualTerm);
     }
   }
 
