@@ -1234,7 +1234,7 @@ border: 1px solid yellow !important;
 }
 
 .help-modal-overlay.visible {
-  display: flex;
+  display: flex !important;
 }
 
 @media (max-width: 768px) {

@@ -627,16 +627,26 @@ function setupHelpModal() {
   const { helpModal, openHelpModalBtn, closeHelpModalBtn } = domElements;
   if (!helpModal || !openHelpModalBtn || !closeHelpModalBtn) return;
 
-  openHelpModalBtn.onclick = () => helpModal.classList.add("visible");
-  closeHelpModalBtn.onclick = () => helpModal.classList.remove("visible");
+  const showHelpModal = () => {
+    helpModal.style.display = "flex";
+    helpModal.classList.add("visible");
+  };
+
+  const hideHelpModal = () => {
+    helpModal.classList.remove("visible");
+    helpModal.style.display = "none";
+  };
+
+  openHelpModalBtn.onclick = showHelpModal;
+  closeHelpModalBtn.onclick = hideHelpModal;
 
   window.addEventListener("click", (e) => {
-    if (e.target === helpModal) helpModal.classList.remove("visible");
+    if (e.target === helpModal) hideHelpModal();
   });
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && helpModal.classList.contains("visible")) {
-      helpModal.classList.remove("visible");
+      hideHelpModal();
     }
   });
 }
