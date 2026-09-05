@@ -233,6 +233,7 @@ function setupGlobalKeyboardShortcuts() {
 // Filter management
 const HIGHLIGHT_CLASS = "active";
 const FILTER_MAP = {
+  showNew: "new",
   showFavorites: "favorites",
   showNotes: "notes",
   showApplied: "applied",
@@ -330,6 +331,12 @@ function setupFilterButtons() {
   controlButtonsContainer.classList.add("filter-row");
 
   // Create filter buttons
+  const newBtn = createFilterButton(
+    "showNew",
+    "sparkles",
+    'New <span class="filter-count" aria-live="polite"></span>'
+  );
+  newBtn.title = "Posts added since your last visit";
   const favBtn = createFilterButton(
     "showFavorites",
     "star",
@@ -364,7 +371,7 @@ function setupFilterButtons() {
 
   resetBtn.title = "Clear all applied statuses, notes, and favorites";
 
-  filterButtons = [favBtn, notesBtn, appliedBtn, hideAppliedBtn, showHiddenBtn];
+  filterButtons = [newBtn, favBtn, notesBtn, appliedBtn, hideAppliedBtn, showHiddenBtn];
 
   // Add event listeners
   filterButtons.forEach((btn) => {
@@ -374,6 +381,7 @@ function setupFilterButtons() {
 
   // Append to container
   [
+    newBtn,
     favBtn,
     notesBtn,
     appliedBtn,
@@ -671,6 +679,7 @@ function applyInitialFilterParam() {
   }
 
   const filterParamMap = {
+    new: "showNew",
     favorites: "showFavorites",
     notes: "showNotes",
     applied: "showApplied",

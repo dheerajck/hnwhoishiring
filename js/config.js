@@ -215,6 +215,7 @@ export const notesKey = "notesHNv1";
 export const favoriteKey = "favoriteHNv1";
 export const themekey = "themeHNv1";
 export const hiddenKey = "hiddenHNv1";
+export const lastVisitKey = "lastVisitHNv1";
 
 export const searchDebounceTimeout = 300;
 export const toastTimeout = 3000;

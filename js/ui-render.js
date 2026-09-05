@@ -26,6 +26,7 @@ import { getYearAndMonthFromTitle } from "./utils.js";
 import { loadThread } from "./thread-manager.js";
 import DOMPurify from "./vendor/purify.js";
 import { icon } from "./icons.js";
+import { isNewSinceLastVisit, markThreadVisited } from "./visits.js";
 
 export const highlightClass = "active";
 
@@ -217,8 +218,9 @@ export function updateJobCardInPlace(jobId, appliedStatus) {
 
   const statusDiv = jobCard.querySelector(".job-header-status");
   if (statusDiv) {
+    const newBadge = jobCard.classList.contains("is-new") ? NEW_BADGE_HTML : "";
     if (appliedStatus) {
-      statusDiv.innerHTML = `
+      statusDiv.innerHTML = `${newBadge}
                 <span class="badge badge-applied">Applied</span>
                 <div class="meta">
                     ${icon("calendar")} ${new Date(
@@ -232,7 +234,7 @@ export function updateJobCardInPlace(jobId, appliedStatus) {
                     })}
                 </div>`;
     } else {
-      statusDiv.innerHTML = "";
+      statusDiv.innerHTML = newBadge;
     }
   }
 
@@ -545,6 +547,7 @@ function deriveJobTitle(html) {
 // A newly loaded thread mounts its first screen synchronously and the rest in chunks
 // so the first cards paint without waiting for all of them to be built.
 // ---------------------------------------------------------------------------
+const NEW_BADGE_HTML = '<span class="badge badge-new">New</span>';
 const FIRST_CHUNK = 24;
 const CHUNK = 60;
 
@@ -576,12 +579,15 @@ function readFilterState() {
     showNotes: on("showNotes"),
     hideApplied: on("hideApplied"),
     showHidden: on("showHidden"),
+    showNew: on("showNew"),
   };
 }
 
-function passesFilters(jobId, f) {
+function passesFilters(entry, f) {
   const th = currentThreadId;
+  const jobId = entry.jobId;
   const isHidden = !!hidden[th]?.[jobId];
+  if (f.showNew) return entry.isNew && !isHidden;
   if (f.showFavs) return !!favorites[th]?.[jobId] && !isHidden;
   if (f.showApplied) return !!applied[th]?.[jobId] && !isHidden;
   if (f.hideApplied) return !applied[th]?.[jobId] && !isHidden;
@@ -595,6 +601,7 @@ function buildCard(c, jobId) {
   const appliedStatus = applied[currentThreadId]?.[jobId];
   const note = notes[currentThreadId]?.[jobId] || "";
   const isFav = favorites[currentThreadId]?.[jobId];
+  const isNew = isNewSinceLastVisit(c, currentThreadId);
   const authorName = c.author || "[unknown author]";
   const postedTime = formatPostedTime(c.created_at);
   const jobTitle = deriveJobTitle(html);
@@ -605,11 +612,13 @@ function buildCard(c, jobId) {
   article.tabIndex = 0;
   article.setAttribute("data-job-id", jobId);
   if (appliedStatus) article.classList.add("applied");
+  if (isNew) article.classList.add("is-new");
 
   article.innerHTML = `
             <div class="job-header">
                 <div class="job-header-top">
                     <div class="job-header-status">
+                        ${isNew ? NEW_BADGE_HTML : ""}
                         ${
                           appliedStatus
                             ? `<span class="badge badge-applied">Applied</span>
@@ -667,6 +676,7 @@ function buildCard(c, jobId) {
     searchText,
     author: (c.author || "").toLowerCase(),
     jobId,
+    isNew,
     hlKey: "",
     excludeMode: "remove",
   };
@@ -718,7 +728,7 @@ function applyView(container) {
   let visibleCount = 0;
 
   for (const entry of cardCache.mounted) {
-    let show = passesFilters(entry.jobId, view.filters);
+    let show = passesFilters(entry, view.filters);
     if (show && view.matches) {
       show = view.matches(
         entry.searchText,
@@ -737,6 +747,17 @@ function applyView(container) {
   const building = cardCache.buildTimer !== null;
   getEmptyStateEl(container).hidden = building || visibleCount > 0;
   appendSearchResultsCount(view.query, visibleCount);
+  updateNewFilterCount();
+}
+
+function updateNewFilterCount() {
+  const countEl = document.querySelector("#showNew .filter-count");
+  if (!countEl) return;
+  let n = 0;
+  for (const entry of cardCache.mounted) {
+    if (entry.isNew && !hidden[currentThreadId]?.[entry.jobId]) n++;
+  }
+  countEl.textContent = n > 0 ? String(n) : "";
 }
 
 function mountCards(container, comments) {
@@ -811,6 +832,7 @@ export function renderJobs(commentsToRender) {
     mountCards(container, commentsToRender);
   }
   applyView(container);
+  markThreadVisited(currentThreadId);
 }
 
 export function updateThemeIcon() {
