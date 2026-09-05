@@ -37,3 +37,7 @@ Re-record only deliberately: it changes the data the baseline was measured again
 ## Functional smoke test
 
 `npm run smoke` drives the real app against the live API in headless Chromium and checks search, filters, exclude/restore, favorites, applied, keyboard navigation and thread switching. Exit code 1 on any failure.
+
+## Stale-cache mix check
+
+GitHub Pages caches every file for 10 minutes, so right after a deploy a visitor can run new `index.html` with old cached JS/CSS, or the reverse. `npm run stale-mix` (or `node stale-mix.mjs --against <ref>`) builds both mixes of the working tree against `origin/main` and fails if either does not boot and render jobs. Run it before merging anything that touches `index.html` together with JS or CSS.
