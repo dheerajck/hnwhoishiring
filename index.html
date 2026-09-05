@@ -11,6 +11,20 @@
     <link rel="stylesheet" href="index.css" />
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#333333" />
+
+    <!-- Fetch the whole module graph in parallel instead of discovering it one import at a time. -->
+    <link rel="modulepreload" href="js/app.js" />
+    <link rel="modulepreload" href="js/ui-events.js" />
+    <link rel="modulepreload" href="js/thread-manager.js" />
+    <link rel="modulepreload" href="js/ui-render.js" />
+    <link rel="modulepreload" href="js/search-logic.js" />
+    <link rel="modulepreload" href="js/api.js" />
+    <link rel="modulepreload" href="js/cache.js" />
+    <link rel="modulepreload" href="js/state.js" />
+    <link rel="modulepreload" href="js/config.js" />
+    <link rel="modulepreload" href="js/utils.js" />
+    <link rel="modulepreload" href="js/vendor/lz-string.js" />
+    <link rel="modulepreload" href="js/vendor/purify.js" />
   </head>
 
   <body class="dark">
@@ -219,9 +233,7 @@
       <i class="fas fa-arrow-up"></i>
     </button>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
-
-    <script src="index.js" type="module"></script>
+    <script src="js/app.js" type="module"></script>
 
     <script
       data-goatcounter="https://dheerajck.goatcounter.com/count"

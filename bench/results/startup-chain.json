@@ -1,0 +1,117 @@
+{
+  "label": "startup-chain",
+  "at": "2026-09-05T05:31:16.529Z",
+  "git": null,
+  "config": {
+    "rtt_ms": 100,
+    "mbps": 5,
+    "cpu_throttle": 4,
+    "runs": 1
+  },
+  "startup": {
+    "cold": {
+      "first_card_ms": 1821.8,
+      "first_card_painted_ms": 2250.9,
+      "fcp_ms": 448,
+      "dcl_ms": 408.8,
+      "requests_before_first_card": 21,
+      "kb_before_first_card": 934.7
+    },
+    "warm": {
+      "first_card_ms": 780.5,
+      "first_card_painted_ms": 1213.4,
+      "fcp_ms": 440,
+      "dcl_ms": 408.5,
+      "requests_before_first_card": 17,
+      "kb_before_first_card": 505.9
+    }
+  },
+  "render": {
+    "posts": 413,
+    "queries": {
+      "(empty)": {
+        "matches": 413,
+        "js_ms": 359.6,
+        "frame_ms": 992.8
+      },
+      "python": {
+        "matches": 99,
+        "js_ms": 148.4,
+        "frame_ms": 332.2
+      },
+      "remote & ~us-based": {
+        "matches": 219,
+        "js_ms": 259.4,
+        "frame_ms": 613
+      },
+      "python | javascript & remote & ~us-based": {
+        "matches": 55,
+        "js_ms": 99.4,
+        "frame_ms": 214
+      },
+      "\"machine learning\"": {
+        "matches": 16,
+        "js_ms": 50,
+        "frame_ms": 98.1
+      }
+    }
+  },
+  "missing_fixtures": [
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.ttf"
+  ],
+  "raw": {
+    "cold": [
+      {
+        "first_card_ms": 1821.8,
+        "first_card_painted_ms": 2250.9,
+        "fcp_ms": 448,
+        "dcl_ms": 408.8,
+        "requests_before_first_card": 21,
+        "kb_before_first_card": 934.7
+      }
+    ],
+    "warm": [
+      {
+        "first_card_ms": 780.5,
+        "first_card_painted_ms": 1213.4,
+        "fcp_ms": 440,
+        "dcl_ms": 408.5,
+        "requests_before_first_card": 17,
+        "kb_before_first_card": 505.9
+      }
+    ],
+    "renders": [
+      {
+        "posts": 413,
+        "queries": {
+          "(empty)": {
+            "matches": 413,
+            "js_ms": 359.6,
+            "frame_ms": 992.8
+          },
+          "python": {
+            "matches": 99,
+            "js_ms": 148.4,
+            "frame_ms": 332.2
+          },
+          "remote & ~us-based": {
+            "matches": 219,
+            "js_ms": 259.4,
+            "frame_ms": 613
+          },
+          "python | javascript & remote & ~us-based": {
+            "matches": 55,
+            "js_ms": 99.4,
+            "frame_ms": 214
+          },
+          "\"machine learning\"": {
+            "matches": 16,
+            "js_ms": 50,
+            "frame_ms": 98.1
+          }
+        }
+      }
+    ]
+  }
+}

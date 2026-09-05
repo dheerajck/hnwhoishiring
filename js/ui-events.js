@@ -170,7 +170,7 @@ const keyboardShortcuts = {
 };
 
 function navigateJobs(direction) {
-  const jobCards = document.querySelectorAll(".job-card");
+  const jobCards = document.querySelectorAll("#jobs .job-card:not([hidden])");
   if (!jobCards.length) return;
 
   const focused = document.activeElement;
