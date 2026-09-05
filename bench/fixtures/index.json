@@ -1,0 +1,68 @@
+{
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css": {
+    "file": "aff6ea18eb50e0c567c9974592e91b983ef3f7b1.gz",
+    "contentType": "text/css; charset=utf-8",
+    "bytes": 102025,
+    "recordedAt": "2026-09-05T05:02:00.939Z"
+  },
+  "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js": {
+    "file": "895fa3114b8ac8fe134cc9484be8a76be796e6ff.gz",
+    "contentType": "application/javascript; charset=utf-8",
+    "bytes": 21074,
+    "recordedAt": "2026-09-05T05:02:00.941Z"
+  },
+  "https://cdn.skypack.dev/lz-string": {
+    "file": "bd4f2b05f00e79ee20c049d637cfd6b1bd86c4ff.gz",
+    "contentType": "application/javascript; charset=utf-8",
+    "bytes": 797,
+    "recordedAt": "2026-09-05T05:02:01.830Z"
+  },
+  "https://cdn.skypack.dev/-/lz-string@v1.5.0-3reJ2N3a29Qnwf7fbCFX/dist=es2019,mode=imports/optimized/lz-string.js": {
+    "file": "f317d0ec7022ca10fde508a008213584c40ac1b0.gz",
+    "contentType": "application/javascript; charset=utf-8",
+    "bytes": 18189,
+    "recordedAt": "2026-09-05T05:02:02.159Z"
+  },
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2": {
+    "file": "7fa6b210fd5ad89d4e04a5fd8f16b4bc1e35f09b.gz",
+    "contentType": "application/octet-stream; charset=utf-8",
+    "bytes": 150124,
+    "recordedAt": "2026-09-05T05:02:02.265Z"
+  },
+  "https://hn.algolia.com/api/v1/search_by_date?query=%22Ask%20HN%3A%20Freelancer%3F%22&tags=ask_hn": {
+    "file": "02260b12e81628d01fbbd106c17691702822a03a.gz",
+    "contentType": "application/json",
+    "bytes": 39650,
+    "recordedAt": "2026-09-05T05:02:03.736Z"
+  },
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2": {
+    "file": "8490a865e07cc4259eee27cd2d948eeb4c7054ff.gz",
+    "contentType": "application/octet-stream; charset=utf-8",
+    "bytes": 108020,
+    "recordedAt": "2026-09-05T05:02:03.775Z"
+  },
+  "https://hn.algolia.com/api/v1/search_by_date?query=%22Ask%20HN%3A%20Who%20wants%20to%20be%20hired%3F%22&tags=ask_hn": {
+    "file": "1e3b8586ef6c9698c520329dfca84212e2bb1c29.gz",
+    "contentType": "application/json",
+    "bytes": 122604,
+    "recordedAt": "2026-09-05T05:02:04.320Z"
+  },
+  "https://hn.algolia.com/api/v1/search_by_date?query=%22Ask%20HN%3A%20Who%20is%20hiring%3F%22&tags=ask_hn": {
+    "file": "7839bfc8e2693f593edf3c7f1a0df35d6221ef3f.gz",
+    "contentType": "application/json",
+    "bytes": 142267,
+    "recordedAt": "2026-09-05T05:02:04.510Z"
+  },
+  "https://hn.algolia.com/api/v1/items/49522897": {
+    "file": "c5cae18f90debd9c03836002491d0918119e7e30.gz",
+    "contentType": "application/json",
+    "bytes": 433007,
+    "recordedAt": "2026-09-05T05:02:08.679Z"
+  },
+  "https://hn.algolia.com/api/v1/items/46857488": {
+    "file": "d4ecebb3a7e67c252b33b0682e9f1b6ed104f715.gz",
+    "contentType": "application/json",
+    "bytes": 682541,
+    "recordedAt": "2026-09-05T05:02:11.202Z"
+  }
+}

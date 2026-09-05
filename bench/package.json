@@ -1,0 +1,14 @@
+{
+  "name": "hnwhoishiring-bench",
+  "private": true,
+  "type": "module",
+  "description": "Reproducible startup + render benchmark for the app (Playwright/Chromium, recorded fixtures, synthetic network).",
+  "scripts": {
+    "record": "node run.mjs --record",
+    "bench": "node run.mjs",
+    "compare": "node compare.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
+  }
+}
