@@ -13,6 +13,7 @@ import {
 
 import { getCache, setCache, minimizeCommentObject } from "./cache.js";
 import { icon } from "./icons.js";
+import { countNewSinceLastVisit } from "./visits.js";
 
 import {
   fetchLatestThreadListFromApi,
@@ -80,6 +81,11 @@ function showNoThreadsMessage(message) {
   getJobsContainer().innerHTML = `<div class="loading">${icon("info-circle")} ${message}</div>`;
   setLoadTimeInfo("");
   clearLastRefreshedInfo();
+}
+
+function newSinceLastVisitSuffix(comments, threadId) {
+  const n = countNewSinceLastVisit(comments, threadId);
+  return n > 0 ? ` · ${n} new since your last visit` : "";
 }
 
 function getThreadCacheKey(threadId) {
@@ -242,7 +248,8 @@ export async function loadThread(id, options = {}) {
       const duration = ((performance.now() - startTime) / 1000).toFixed(2);
       setLastRefreshedInfo(refreshedAt);
       setLoadTimeInfo(
-        `Loaded ${commentsForThisRequest.length} jobs (${uniqueNewComments.length} new jobs added) in ${duration} seconds`
+        `Loaded ${commentsForThisRequest.length} jobs (${uniqueNewComments.length} new jobs added) in ${duration} seconds` +
+          newSinceLastVisitSuffix(commentsForThisRequest, requestedIdForThisCall)
       );
 
       return true;
@@ -266,7 +273,8 @@ export async function loadThread(id, options = {}) {
     const duration = ((performance.now() - startTime) / 1000).toFixed(2);
     setLastRefreshedInfo(refreshedAt);
     setLoadTimeInfo(
-      `Loaded ${commentsForThisRequest.length} jobs in ${duration} seconds`
+      `Loaded ${commentsForThisRequest.length} jobs in ${duration} seconds` +
+        newSinceLastVisitSuffix(commentsForThisRequest, requestedIdForThisCall)
     );
 
     return true;

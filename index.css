@@ -1032,6 +1032,7 @@ body:not(.dark) .icon-link-button .icon-sun {
   justify-content: center;
   gap: 0.3rem; /* Further reduced gap */
   flex: 1; /* Make all filter buttons take equal width */
+  white-space: nowrap;
 }
 .filter-btn.active {
   background-color: var(--primary);
@@ -1151,6 +1152,32 @@ border: 1px solid yellow !important;
 }
 
 /* Applied badge styling */
+.badge-new {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.filter-count {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8em;
+  line-height: 1.5em;
+  text-align: center;
+}
+.filter-count:empty {
+  display: none;
+}
+.filter-btn.active .filter-count {
+  background: #fff;
+  color: var(--primary);
+}
+
 .badge-applied {
   font-weight: bold;
   letter-spacing: 0.5px;

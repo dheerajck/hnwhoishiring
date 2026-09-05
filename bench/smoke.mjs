@@ -120,6 +120,33 @@ await page.keyboard.press("j");
 await page.keyboard.press("j");
 check("j lands on a visible card", await page.evaluate(() => document.activeElement?.classList.contains("job-card") && !document.activeElement.hidden));
 
+// "New since last visit": plant a previous-visit timestamp equal to the 10th newest post,
+// reload, and expect exactly the 9 newer posts to be badged and shown by the New filter.
+{
+  const threadId = await page.getAttribute(".month-selector button.active", "data-thread-id");
+  const tenthTs = await page.evaluate(async () => {
+    const st = await import("/js/state.js");
+    const sorted = [...st.allComments].sort((a, b) => b.created_at_i - a.created_at_i);
+    return sorted[9].created_at_i * 1000;
+  });
+  // The app persists "visited now" on pagehide, so plant the timestamp from a same-origin
+  // page that does not run the app.
+  await page.goto(origin + "/manifest.json");
+  await page.evaluate(([id, ts]) => localStorage.setItem("lastVisitHNv1", JSON.stringify({ [id]: ts })), [threadId, tenthTs]);
+  await page.goto(origin + "/");
+  await settle();
+  const badges = await page.locator("#jobs .job-card .badge-new").count();
+  check("new badges on posts since last visit", badges === 9, `(${badges})`);
+  check("New filter shows count", (await page.textContent("#showNew .filter-count")).trim() === "9");
+  check("status mentions new since last visit", (await page.textContent("#load-time-info")).includes("9 new since your last visit"));
+  await page.click("#showNew");
+  await page.waitForTimeout(300);
+  check("New filter shows only new posts", (await visibleCards().count()) === 9);
+  await page.click("#showNew");
+  await page.waitForTimeout(300);
+  await page.evaluate(() => localStorage.removeItem("lastVisitHNv1"));
+}
+
 // switching thread rebuilds
 await page.fill("#search", "");
 await page.locator(".month-selector button").nth(1).click();
