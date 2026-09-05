@@ -232,6 +232,10 @@ button:active,
 }
 
 .job-card {
+  /* Skip layout and paint for cards outside the viewport; remember the last rendered size
+     (falling back to 300px) so the scrollbar does not jump. Big win on long threads. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
   border: 1px solid var(--border); /* Ensure default border width */
   margin: 1.2rem 0;
   padding: 1.2rem;
@@ -239,6 +243,10 @@ button:active,
   background: var(--surface);
   box-shadow: var(--card-shadow);
   transition: var(--transition);
+}
+
+.job-card[hidden] {
+  display: none;
 }
 
 .job-card.applied {

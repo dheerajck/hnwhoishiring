@@ -64,5 +64,17 @@
     "contentType": "application/json",
     "bytes": 682541,
     "recordedAt": "2026-09-05T05:02:11.202Z"
+  },
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2": {
+    "file": "4632c063fd4831a37855de59afa66f2b11fca926.gz",
+    "contentType": "application/octet-stream; charset=utf-8",
+    "bytes": 24948,
+    "recordedAt": "2026-09-05T05:32:59.979Z"
+  },
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.ttf": {
+    "file": "3294bae1d63ebef754c35c377088d02f14aae6e0.gz",
+    "contentType": "application/octet-stream; charset=utf-8",
+    "bytes": 63952,
+    "recordedAt": "2026-09-05T05:33:00.030Z"
   }
 }

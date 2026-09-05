@@ -32,7 +32,7 @@ const LABEL = args.label || (RECORD ? "record" : `run-${Date.now()}`);
 const RTT_MS = num(args.rtt, 100);
 const MBPS = num(args.mbps, 5);
 const CPU = num(args.cpu, 4);
-const RUNS = num(args.runs, 3);
+const RUNS = num(args.runs, 1);
 const HEADLESS = args.headed ? false : true;
 
 const RENDER_QUERIES = [
@@ -175,9 +175,12 @@ async function benchmark(browser, origin) {
     renders.push(await collectRender(warmPage));
 
     await context.close();
-    process.stdout.write(`run ${i + 1}/${RUNS} done\r`);
+    const c = cold[cold.length - 1], w = warm[warm.length - 1];
+    console.log(
+      `run ${i + 1}/${RUNS}: cold first card ${c.first_card_ms} ms (painted ${c.first_card_painted_ms}), ` +
+        `warm ${w.first_card_ms} ms (painted ${w.first_card_painted_ms}), render done`
+    );
   }
-  console.log();
 
   const result = {
     label: LABEL,
@@ -280,6 +283,7 @@ async function collectRender(page) {
     BIG_THREAD_ID
   );
   await waitForLoaded(page);
+  await waitForCardsToSettle(page);
 
   return page.evaluate(async (queries) => {
     const ui = await import("/js/ui-render.js");
@@ -298,6 +302,12 @@ async function collectRender(page) {
       const js = [], frame = [];
       let matches = 0;
       for (let i = 0; i < REPEATS; i++) {
+        // A real keystroke always changes the query, so reset to a different query first
+        // (unmeasured) to make sure the measured render cannot reuse cached highlights.
+        input.value = q === "" ? "reset" : "";
+        ui.renderJobs(state.allComments);
+        await nextFrame();
+
         input.value = q;
         const t0 = performance.now();
         ui.renderJobs(state.allComments);
@@ -306,7 +316,7 @@ async function collectRender(page) {
         const t2 = performance.now();
         js.push(t1 - t0);
         frame.push(t2 - t0);
-        matches = document.querySelectorAll("#jobs .job-card").length;
+        matches = document.querySelectorAll("#jobs .job-card:not([hidden])").length;
       }
       out.queries[q || "(empty)"] = {
         matches,
@@ -343,6 +353,25 @@ async function throttleCpu(page, rate) {
   if (!rate || rate <= 1) return;
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate });
+}
+
+// Cards may be mounted in chunks after "Loaded" is shown; wait until the count stops changing.
+async function waitForCardsToSettle(page) {
+  await page.waitForFunction(
+    () =>
+      new Promise((resolve) => {
+        let last = -1;
+        const tick = () => {
+          const n = document.querySelectorAll("#jobs .job-card").length;
+          if (n === last) return resolve(true);
+          last = n;
+          setTimeout(tick, 300);
+        };
+        tick();
+      }),
+    null,
+    { timeout: 60_000 }
+  );
 }
 
 async function waitForLoaded(page) {

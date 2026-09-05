@@ -1,6 +1,7 @@
 import { CATEGORY_API_MAP, MONTH_NAMES, toastTimeout } from "./config.js";
 
 import {
+  allComments,
   allThreads,
   currentCategory,
   currentThreadId,
@@ -17,7 +18,7 @@ import {
 
 import {
   parseQuery,
-  evaluateQuery,
+  compileQuery,
   buildWordMatchPattern,
   escapeRegex,
 } from "./search-logic.js";
@@ -27,18 +28,28 @@ import DOMPurify from "./vendor/purify.js";
 
 export const highlightClass = "active";
 
-// Adds target="_blank" and rel="noopener noreferrer" to all links in HTML content
-function addTargetBlankToLinks(html) {
-  if (!html) return html;
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+// One DOMParser pass per job post, done once per thread load:
+// - sanitizes with DOMPurify
+// - adds target="_blank" rel="noopener noreferrer" to every link
+// - derives the lowercase plain text used for searching (block boundaries become
+//   newlines so a whole-word match cannot bleed across paragraphs)
+function prepareCommentHtml(rawHtml) {
+  const clean = DOMPurify.sanitize(rawHtml || "[No comment text]");
+  const doc = new DOMParser().parseFromString(`<div>${clean}</div>`, "text/html");
   const root = doc.body.firstChild;
-  const links = root.querySelectorAll("a");
-  links.forEach((link) => {
+
+  root.querySelectorAll("a").forEach((link) => {
     link.setAttribute("target", "_blank");
     link.setAttribute("rel", "noopener noreferrer");
   });
-  return root.innerHTML;
+  const html = root.innerHTML;
+
+  root.querySelectorAll("p, br, li, pre, div, blockquote").forEach((el) => {
+    el.parentNode.insertBefore(doc.createTextNode("\n"), el);
+  });
+  const searchText = root.textContent.toLowerCase();
+
+  return { html, searchText };
 }
 
 // Highlights search terms in visible text only, preserving HTML structure
@@ -252,24 +263,29 @@ export function updateJobCardInPlace(jobId, appliedStatus) {
   }
 }
 
-// Remove a job card from the DOM by jobId
+// A card whose state changed so that it no longer belongs in the current view (e.g. it
+// was excluded, or un-favorited while the Favorites filter is on). Cards are cached, so
+// instead of removing the node we re-apply the view and move focus to the next visible card.
 export function removeJobCardInPlace(jobId) {
   const jobCard = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
-  if (jobCard && jobCard.parentNode) {
-    // Always prefer the next card (down), only use previous if no next exists
-    let nextCard = jobCard.nextElementSibling;
-    jobCard.parentNode.removeChild(jobCard);
-    if (nextCard && nextCard.classList.contains("job-card")) {
-      // Scroll so the next card is at the top of the viewport
-      nextCard.scrollIntoView({ behavior: "smooth", block: "start" });
-      nextCard.focus();
-    } else {
-      // If no next, try previous
-      let prevCard = jobCard.previousElementSibling;
-      if (prevCard && prevCard.classList.contains("job-card")) {
-        prevCard.scrollIntoView({ behavior: "smooth", block: "start" });
-        prevCard.focus();
-      }
+  if (!jobCard) return;
+
+  const visible = Array.from(
+    document.querySelectorAll("#jobs .job-card:not([hidden])")
+  );
+  const index = visible.indexOf(jobCard);
+
+  renderJobs(allComments);
+
+  if (jobCard.hidden) {
+    const stillVisible = Array.from(
+      document.querySelectorAll("#jobs .job-card:not([hidden])")
+    );
+    // Prefer the card that followed the removed one, otherwise the one before it.
+    const next = stillVisible[Math.min(index, stillVisible.length - 1)];
+    if (next) {
+      next.scrollIntoView({ behavior: "smooth", block: "start" });
+      next.focus();
     }
   }
 }
@@ -469,218 +485,142 @@ export function renderParsedQuery(tokens) {
 
 // Preserve original load-time-info text but append search results when query present
 function appendSearchResultsCount(query, filteredCount) {
-  try {
-    const el = document.getElementById("load-time-info");
-    if (!el) return;
-    // Remove any previous ' | Search results: ...' suffix to keep idempotent
-    const baseText = el.textContent.replace(/\s*\|\s*Search results:\s*\d+$/i, "");
-    if (query && query.trim().length > 0) {
-      if (baseText && baseText.trim().length > 0) {
-        el.textContent = `${baseText} | Search results: ${filteredCount}`;
-      } else {
-        el.textContent = `Search results: ${filteredCount}`;
-      }
-    } else {
-      // If no query, restore base message (do not append)
-      el.textContent = baseText;
-    }
-  } catch (e) {
-    console.error('Failed to update search results count', e);
+  const el = document.getElementById("load-time-info");
+  if (!el) return;
+  // Remove any previous ' | Search results: ...' suffix to keep idempotent
+  const baseText = el.textContent.replace(/\s*\|\s*Search results:\s*\d+$/i, "");
+  if (query && query.trim().length > 0) {
+    el.textContent = baseText.trim()
+      ? `${baseText} | Search results: ${filteredCount}`
+      : `Search results: ${filteredCount}`;
+  } else {
+    el.textContent = baseText;
   }
 }
 
-export function renderJobs(commentsToRender) {
-  const container = document.getElementById("jobs");
-  const query = document.getElementById("search").value;
-  // Filter button states will be accessed directly via their element IDs or references
-  // once ui-events.js creates them. For now, assume they might be undefined if accessed early.
-  const showFavs =
-    document
-      .getElementById("showFavorites")
-      ?.classList.contains(highlightClass) || false;
-  const showApplied =
-    document
-      .getElementById("showApplied")
-      ?.classList.contains(highlightClass) || false;
-  const showNotes =
-    document.getElementById("showNotes")?.classList.contains(highlightClass) ||
-    false;
-  const hideAppliedActive =
-    document
-      .getElementById("hideApplied")
-      ?.classList.contains(highlightClass) || false;
-  const showHiddenActive =
-    document.getElementById("showHidden")?.classList.contains(highlightClass) ||
-    false;
+function formatDateTime(value) {
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
-  container.innerHTML = "";
-  let filteredComments = commentsToRender;
-  const getJobId = (comment) => comment.id;
+function formatPostedTime(createdAt) {
+  if (!createdAt) return "";
+  const d = new Date(createdAt);
+  const diffMins = Math.floor((Date.now() - d) / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  let timeAgo = "just now";
+  if (diffDays > 0) timeAgo = `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+  else if (diffHours > 0) timeAgo = `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+  else if (diffMins > 0) timeAgo = `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
+  return `${formatDateTime(d)} <span title="${d.toLocaleString()}">(${timeAgo})</span>`;
+}
 
-  if (showFavs) {
-    filteredComments = filteredComments.filter(
-      (c) =>
-        favorites[currentThreadId]?.[getJobId(c)] &&
-        !hidden[currentThreadId]?.[getJobId(c)]
-    );
-  } else if (showApplied) {
-    filteredComments = filteredComments.filter(
-      (c) =>
-        applied[currentThreadId]?.[getJobId(c)] &&
-        !hidden[currentThreadId]?.[getJobId(c)]
-    );
-  } else if (hideAppliedActive) {
-    filteredComments = filteredComments.filter(
-      (c) =>
-        !applied[currentThreadId]?.[getJobId(c)] &&
-        !hidden[currentThreadId]?.[getJobId(c)]
-    );
-  } else if (showNotes) {
-    filteredComments = filteredComments.filter((c) => {
-      const jobId = getJobId(c);
-      return (
-        notes[currentThreadId]?.[jobId] &&
-        notes[currentThreadId][jobId].trim().length > 0 &&
-        !hidden[currentThreadId]?.[jobId]
-      );
-    });
-  } else if (showHiddenActive) {
-    filteredComments = filteredComments.filter(
-      (c) => hidden[currentThreadId]?.[getJobId(c)]
-    );
-  } else {
-    filteredComments = filteredComments.filter(
-      (c) => !hidden[currentThreadId]?.[getJobId(c)]
-    );
+function deriveJobTitle(html) {
+  const plainText = html.replace(/<[^>]+>/g, "");
+  if (currentCategory === "hiring") {
+    const titleLineMatch = plainText.match(/^.*?(?=\n|$)/);
+    const rawTitleLine = titleLineMatch ? titleLineMatch[0].trim() : "";
+    const title = rawTitleLine.includes("|")
+      ? rawTitleLine.split("|")[0].trim()
+      : rawTitleLine;
+    return title.length < 2 || title.length > 80 ? "Job Post" : title;
   }
+  if (currentCategory === "hired") return "SEEKING WORK";
+  if (plainText.includes("SEEKING WORK")) return "SEEKING WORK";
+  if (plainText.includes("SEEKING FREELANCER")) return "SEEKING FREELANCER";
+  return "Title Not Found";
+}
 
-  const queryTokens = parseQuery(query);
-  renderParsedQuery(queryTokens);
+// ---------------------------------------------------------------------------
+// Card cache. Cards are built once per thread and kept; searching and filtering only
+// toggle `hidden` on the existing elements and re-highlight the visible ones, so the
+// cost of a keystroke scales with the number of matches, not the size of the thread.
+// A newly loaded thread mounts its first screen synchronously and the rest in chunks
+// so the first cards paint without waiting for all of them to be built.
+// ---------------------------------------------------------------------------
+const FIRST_CHUNK = 24;
+const CHUNK = 60;
 
-  if (queryTokens.length > 0) {
-    filteredComments = filteredComments.filter((c) => {
-      const jobId = getJobId(c);
-      return evaluateQuery(
-        (c.text || "").toLowerCase(),
-        (c.author || "").toLowerCase(),
-        (notes[currentThreadId]?.[jobId] || "").toLowerCase(),
-        queryTokens
-      );
-    });
-  }
+const cardCache = {
+  threadId: null,
+  comments: null, // the array the current mount was built from
+  cards: new Map(), // jobId -> entry
+  mounted: [], // entries in DOM order
+  emptyEl: null,
+  buildTimer: null,
+  view: null,
+};
 
-  // Update load-time-info with filtered count when a query is active
-  appendSearchResultsCount(query, filteredComments.length);
+function resetCardCache() {
+  clearTimeout(cardCache.buildTimer);
+  cardCache.buildTimer = null;
+  cardCache.cards.clear();
+  cardCache.mounted = [];
+  cardCache.comments = null;
+  cardCache.emptyEl = null;
+}
 
-  if (filteredComments.length === 0) {
-    let message = "No matches found!";
-    // ... (message updates based on filters)
-    container.innerHTML = `<div class="loading fade-in"><i class="far fa-meh"></i> ${message}</div>`;
-    return;
-  }
+function readFilterState() {
+  const on = (id) =>
+    document.getElementById(id)?.classList.contains(highlightClass) || false;
+  return {
+    showFavs: on("showFavorites"),
+    showApplied: on("showApplied"),
+    showNotes: on("showNotes"),
+    hideApplied: on("hideApplied"),
+    showHidden: on("showHidden"),
+  };
+}
 
-  filteredComments.forEach((c) => {
-    const jobId = getJobId(c);
-    const appliedStatus = applied[currentThreadId]?.[jobId];
-    const note = notes[currentThreadId]?.[jobId] || "";
-    const isFav = favorites[currentThreadId]?.[jobId];
-    // const isHidden = hidden[currentThreadId]?.[jobId]; // Already used for filtering
+function passesFilters(jobId, f) {
+  const th = currentThreadId;
+  const isHidden = !!hidden[th]?.[jobId];
+  if (f.showFavs) return !!favorites[th]?.[jobId] && !isHidden;
+  if (f.showApplied) return !!applied[th]?.[jobId] && !isHidden;
+  if (f.hideApplied) return !applied[th]?.[jobId] && !isHidden;
+  if (f.showNotes) return !!notes[th]?.[jobId]?.trim() && !isHidden;
+  if (f.showHidden) return isHidden;
+  return !isHidden;
+}
 
-    let postedTime = "";
-    if (c.created_at) {
-      const d = new Date(c.created_at);
-      const formattedDate = d.toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-      const now = new Date();
-      const diffMs = now - d;
-      const diffSecs = Math.floor(diffMs / 1000);
-      const diffMins = Math.floor(diffSecs / 60);
-      const diffHours = Math.floor(diffMins / 60);
-      const diffDays = Math.floor(diffHours / 24);
-      let timeAgo = "";
-      if (diffDays > 0)
-        timeAgo = `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
-      else if (diffHours > 0)
-        timeAgo = `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
-      else if (diffMins > 0)
-        timeAgo = `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
-      else timeAgo = "just now";
-      postedTime = `${formattedDate} <span title="${d.toLocaleString()}">(${timeAgo})</span>`;
-    }
+function buildCard(c, jobId) {
+  const { html, searchText } = prepareCommentHtml(c.text);
+  const appliedStatus = applied[currentThreadId]?.[jobId];
+  const note = notes[currentThreadId]?.[jobId] || "";
+  const isFav = favorites[currentThreadId]?.[jobId];
+  const authorName = c.author || "[unknown author]";
+  const postedTime = formatPostedTime(c.created_at);
+  const jobTitle = deriveJobTitle(html);
+  const hnLink = `https://news.ycombinator.com/item?id=${jobId}`;
 
-    let commentTextHTML = DOMPurify.sanitize(c.text || "[No comment text]");
+  const article = document.createElement("article");
+  article.className = "job-card fade-in";
+  article.tabIndex = 0;
+  article.setAttribute("data-job-id", jobId);
+  if (appliedStatus) article.classList.add("applied");
 
-    commentTextHTML = addTargetBlankToLinks(commentTextHTML);
-    if (queryTokens.length > 0) {
-      commentTextHTML = highlightSearchTerms(commentTextHTML, queryTokens);
-    }
-    const authorName = c.author || "[unknown author]";
-    const plainTextComment = commentTextHTML.replace(/<[^>]+>/g, "");
-
-    let jobTitle = "";
-
-    if (currentCategory === "hiring") {
-      const titleLineMatch = plainTextComment.match(/^.*?(?=\n|$)/);
-      const rawTitleLine = titleLineMatch ? titleLineMatch[0].trim() : "";
-
-      jobTitle = rawTitleLine.includes("|")
-        ? rawTitleLine.split("|")[0].trim()
-        : rawTitleLine;
-      if (jobTitle.length < 2 || jobTitle.length > 80) {
-        jobTitle = "Job Post";
-      }
-    } else if (currentCategory === "hired") {
-      jobTitle = "SEEKING WORK";
-    } else if (currentCategory === "freelance") {
-      if (plainTextComment.includes("SEEKING WORK")) {
-        jobTitle = "SEEKING WORK";
-      } else if (plainTextComment.includes("SEEKING FREELANCER")) {
-        jobTitle = "SEEKING FREELANCER";
-      } else {
-        jobTitle = "Title Not Found";
-      }
-    }
-
-    const article = document.createElement("article");
-    article.className = "job-card fade-in";
-    article.tabIndex = 0;
-    article.setAttribute("data-job-id", jobId);
-    if (appliedStatus) article.classList.add("applied");
-
-    let hideOrUnhideBtn = "";
-    if (showHiddenActive) {
-      hideOrUnhideBtn = `<button class="job-action-button btn-unhide btn-remove-margin" data-action="unhide" title="Restore"><i class="fas fa-undo"></i> Restore</button>`;
-    } else {
-      hideOrUnhideBtn = `<button class="job-action-button btn-remove btn-remove-margin" data-action="remove" title="Exclude"><i class="fas fa-xmark"></i> Exclude</button>`;
-    }
-
-    article.innerHTML = `
+  article.innerHTML = `
             <div class="job-header">
                 <div class="job-header-top">
                     <div class="job-header-status">
                         ${
                           appliedStatus
                             ? `<span class="badge badge-applied">Applied</span>
-                            <div class="meta"><i class="far fa-calendar"></i> ${new Date(
+                            <div class="meta"><i class="far fa-calendar"></i> ${formatDateTime(
                               appliedStatus
-                            ).toLocaleString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            })}</div>`
+                            )}</div>`
                             : ""
                         }
                     </div>
                     <div class="job-posted-time">${
                       postedTime
-                        ? `<a href="https://news.ycombinator.com/item?id=${jobId}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${postedTime}</a>`
+                        ? `<a href="${hnLink}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${postedTime}</a>`
                         : ""
                     }</div>
                 </div>
@@ -688,24 +628,24 @@ export function renderJobs(commentsToRender) {
                     <button class="action-btn star-btn${
                       isFav ? "" : " inactive"
                     }" data-action="star" title="Add to Favorite" aria-label="Star job"><i class="fas fa-star"></i></button>
-                    <div class="job-title"><a href="https://news.ycombinator.com/item?id=${jobId}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${jobTitle}</a></div>
+                    <div class="job-title"><a href="${hnLink}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${jobTitle}</a></div>
                 </div>
                 <div class="job-author-container">
                     <div class="job-author">
                         <span class="job-author-main">Posted by: ${authorName}</span>
-                        <a href="https://news.ycombinator.com/item?id=${jobId}" class="action-btn" target="_blank" rel="noopener noreferrer" title="Open on Hacker News" aria-label="Open on Hacker News"><i class="fas fa-external-link-alt"></i></a>
+                        <a href="${hnLink}" class="action-btn" target="_blank" rel="noopener noreferrer" title="Open on Hacker News" aria-label="Open on Hacker News"><i class="fas fa-external-link-alt"></i></a>
                         <button class="action-btn" data-action="copy-link" title="Copy link" aria-label="Copy link"><i class="fas fa-copy"></i></button>
                     </div>
                 </div>
             </div>
             <div class="job-content">
-                <div class="job-description">${commentTextHTML}</div>
+                <div class="job-description"></div>
             </div>
             <div class="job-notes">
-                <textarea class="note" placeholder="Add notes about this position...">${note}</textarea>
+                <textarea class="note" placeholder="Add notes about this position..."></textarea>
             </div>
             <div class="job-actions">
-                ${hideOrUnhideBtn}
+                <button class="job-action-button btn-remove btn-remove-margin" data-action="remove" title="Exclude"><i class="fas fa-xmark"></i> Exclude</button>
                 <button class="job-action-button btn-save-note" data-action="save-note" title="Update Note"><i class="fas fa-edit"></i> Update Note</button>
                 ${
                   appliedStatus
@@ -714,8 +654,162 @@ export function renderJobs(commentsToRender) {
                 }
             </div>
         `;
-    container.appendChild(article);
-  });
+
+  const desc = article.querySelector(".job-description");
+  desc.innerHTML = html;
+  article.querySelector(".note").value = note;
+
+  return {
+    el: article,
+    desc,
+    html,
+    searchText,
+    author: (c.author || "").toLowerCase(),
+    jobId,
+    hlKey: "",
+    excludeMode: "remove",
+  };
+}
+
+// Exclude <-> Restore button depends on whether the "Show Excluded" filter is on.
+function applyExcludeMode(entry, showHidden) {
+  const mode = showHidden ? "unhide" : "remove";
+  if (entry.excludeMode === mode) return;
+  const btn = entry.el.querySelector(".btn-remove, .btn-unhide");
+  if (!btn) return;
+  if (mode === "unhide") {
+    btn.className = "job-action-button btn-unhide btn-remove-margin";
+    btn.dataset.action = "unhide";
+    btn.title = "Restore";
+    btn.innerHTML = '<i class="fas fa-undo"></i> Restore';
+  } else {
+    btn.className = "job-action-button btn-remove btn-remove-margin";
+    btn.dataset.action = "remove";
+    btn.title = "Exclude";
+    btn.innerHTML = '<i class="fas fa-xmark"></i> Exclude';
+  }
+  entry.excludeMode = mode;
+}
+
+function applyHighlight(entry, view) {
+  if (entry.hlKey === view.hlKey) return;
+  entry.desc.innerHTML = view.hlKey
+    ? highlightSearchTerms(entry.html, view.queryTokens)
+    : entry.html;
+  entry.hlKey = view.hlKey;
+}
+
+function getEmptyStateEl(container) {
+  if (!cardCache.emptyEl || !container.contains(cardCache.emptyEl)) {
+    const el = document.createElement("div");
+    el.className = "loading fade-in";
+    el.innerHTML = '<i class="far fa-meh"></i> No matches found!';
+    el.hidden = true;
+    container.prepend(el);
+    cardCache.emptyEl = el;
+  }
+  return cardCache.emptyEl;
+}
+
+// Applies the current view (filters + query) to every mounted card.
+function applyView(container) {
+  const view = cardCache.view;
+  let visibleCount = 0;
+
+  for (const entry of cardCache.mounted) {
+    let show = passesFilters(entry.jobId, view.filters);
+    if (show && view.matches) {
+      show = view.matches(
+        entry.searchText,
+        entry.author,
+        (notes[currentThreadId]?.[entry.jobId] || "").toLowerCase()
+      );
+    }
+    entry.el.hidden = !show;
+    if (show) {
+      visibleCount++;
+      applyExcludeMode(entry, view.filters.showHidden);
+      applyHighlight(entry, view);
+    }
+  }
+
+  const building = cardCache.buildTimer !== null;
+  getEmptyStateEl(container).hidden = building || visibleCount > 0;
+  appendSearchResultsCount(view.query, visibleCount);
+}
+
+function mountCards(container, comments) {
+  clearTimeout(cardCache.buildTimer);
+  cardCache.buildTimer = null;
+  cardCache.comments = comments;
+  cardCache.mounted = [];
+  cardCache.emptyEl = null;
+  container.innerHTML = "";
+  getEmptyStateEl(container);
+
+  let i = 0;
+  const appendChunk = (size) => {
+    const frag = document.createDocumentFragment();
+    const end = Math.min(i + size, comments.length);
+    for (; i < end; i++) {
+      const c = comments[i];
+      const jobId = c.id;
+      let entry = cardCache.cards.get(jobId);
+      if (!entry) {
+        entry = buildCard(c, jobId);
+        cardCache.cards.set(jobId, entry);
+      }
+      cardCache.mounted.push(entry);
+      frag.appendChild(entry.el);
+    }
+    container.appendChild(frag);
+  };
+
+  const buildMore = () => {
+    if (i >= comments.length) {
+      cardCache.buildTimer = null;
+      applyView(container);
+      return;
+    }
+    appendChunk(CHUNK);
+    applyView(container);
+    cardCache.buildTimer = setTimeout(buildMore, 0);
+  };
+
+  appendChunk(FIRST_CHUNK);
+  if (i < comments.length) {
+    cardCache.buildTimer = setTimeout(buildMore, 0);
+  }
+}
+
+export function renderJobs(commentsToRender) {
+  const container = document.getElementById("jobs");
+  const query = document.getElementById("search").value;
+  const queryTokens = parseQuery(query);
+  renderParsedQuery(queryTokens);
+
+  cardCache.view = {
+    query,
+    queryTokens,
+    filters: readFilterState(),
+    matches: compileQuery(queryTokens),
+    hlKey: queryTokens.join(" "),
+  };
+
+  if (cardCache.threadId !== currentThreadId) {
+    resetCardCache();
+    cardCache.threadId = currentThreadId;
+  }
+
+  const needsMount =
+    cardCache.comments !== commentsToRender ||
+    cardCache.mounted.length === 0 ||
+    !container.contains(cardCache.mounted[0].el);
+
+  if (needsMount) {
+    mountCards(container, commentsToRender);
+  }
+  applyView(container);
 }
 
 export function updateThemeIcon() {

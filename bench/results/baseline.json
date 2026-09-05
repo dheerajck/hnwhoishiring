@@ -1,27 +1,27 @@
 {
   "label": "baseline",
-  "at": "2026-09-05T05:20:08.741Z",
+  "at": "2026-09-05T05:30:24.329Z",
   "git": null,
   "config": {
     "rtt_ms": 100,
     "mbps": 5,
     "cpu_throttle": 4,
-    "runs": 3
+    "runs": 1
   },
   "startup": {
     "cold": {
-      "first_card_ms": 2581.9,
-      "first_card_painted_ms": 3010.6,
-      "fcp_ms": 444,
-      "dcl_ms": 1001.1,
+      "first_card_ms": 2593.4,
+      "first_card_painted_ms": 3025.4,
+      "fcp_ms": 452,
+      "dcl_ms": 1013.4,
       "requests_before_first_card": 23,
       "kb_before_first_card": 1230.5
     },
     "warm": {
-      "first_card_ms": 1329,
-      "first_card_painted_ms": 1766.8,
-      "fcp_ms": 436,
-      "dcl_ms": 1329,
+      "first_card_ms": 1324.1,
+      "first_card_painted_ms": 1766.4,
+      "fcp_ms": 440,
+      "dcl_ms": 1324.9,
       "requests_before_first_card": 19,
       "kb_before_first_card": 510.3
     }
@@ -31,81 +31,52 @@
     "queries": {
       "(empty)": {
         "matches": 413,
-        "js_ms": 375.2,
-        "frame_ms": 1040.4
+        "js_ms": 312.4,
+        "frame_ms": 966.4
       },
       "python": {
         "matches": 99,
-        "js_ms": 105.2,
-        "frame_ms": 269.4
+        "js_ms": 135.3,
+        "frame_ms": 316.2
       },
       "remote & ~us-based": {
         "matches": 219,
-        "js_ms": 225.3,
-        "frame_ms": 568.2
+        "js_ms": 243.6,
+        "frame_ms": 597.1
       },
       "python | javascript & remote & ~us-based": {
         "matches": 55,
-        "js_ms": 66.5,
-        "frame_ms": 166.4
+        "js_ms": 94.5,
+        "frame_ms": 210.3
       },
       "\"machine learning\"": {
         "matches": 16,
-        "js_ms": 20,
-        "frame_ms": 56
+        "js_ms": 48.8,
+        "frame_ms": 99.3
       }
     }
   },
-  "missing_fixtures": [],
+  "missing_fixtures": [
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.ttf"
+  ],
   "raw": {
     "cold": [
       {
-        "first_card_ms": 2616.7,
-        "first_card_painted_ms": 3043.4,
+        "first_card_ms": 2593.4,
+        "first_card_painted_ms": 3025.4,
         "fcp_ms": 452,
-        "dcl_ms": 1015.9,
-        "requests_before_first_card": 23,
-        "kb_before_first_card": 1230.5
-      },
-      {
-        "first_card_ms": 2581.9,
-        "first_card_painted_ms": 3010.6,
-        "fcp_ms": 444,
-        "dcl_ms": 998.6,
-        "requests_before_first_card": 23,
-        "kb_before_first_card": 1230.5
-      },
-      {
-        "first_card_ms": 2575.1,
-        "first_card_painted_ms": 3005.5,
-        "fcp_ms": 432,
-        "dcl_ms": 1001.1,
+        "dcl_ms": 1013.4,
         "requests_before_first_card": 23,
         "kb_before_first_card": 1230.5
       }
     ],
     "warm": [
       {
-        "first_card_ms": 1329,
-        "first_card_painted_ms": 1766.8,
-        "fcp_ms": 436,
-        "dcl_ms": 1329,
-        "requests_before_first_card": 20,
-        "kb_before_first_card": 510.3
-      },
-      {
-        "first_card_ms": 1356,
-        "first_card_painted_ms": 1787.8,
+        "first_card_ms": 1324.1,
+        "first_card_painted_ms": 1766.4,
         "fcp_ms": 440,
-        "dcl_ms": 1356.6,
-        "requests_before_first_card": 19,
-        "kb_before_first_card": 510.3
-      },
-      {
-        "first_card_ms": 1326.3,
-        "first_card_painted_ms": 1758.5,
-        "fcp_ms": 436,
-        "dcl_ms": 1326.4,
+        "dcl_ms": 1324.9,
         "requests_before_first_card": 19,
         "kb_before_first_card": 510.3
       }
@@ -116,88 +87,28 @@
         "queries": {
           "(empty)": {
             "matches": 413,
-            "js_ms": 375.2,
-            "frame_ms": 1037.6
+            "js_ms": 312.4,
+            "frame_ms": 966.4
           },
           "python": {
             "matches": 99,
-            "js_ms": 105.2,
-            "frame_ms": 269.4
+            "js_ms": 135.3,
+            "frame_ms": 316.2
           },
           "remote & ~us-based": {
             "matches": 219,
-            "js_ms": 225.3,
-            "frame_ms": 568.2
+            "js_ms": 243.6,
+            "frame_ms": 597.1
           },
           "python | javascript & remote & ~us-based": {
             "matches": 55,
-            "js_ms": 68.6,
-            "frame_ms": 167
+            "js_ms": 94.5,
+            "frame_ms": 210.3
           },
           "\"machine learning\"": {
             "matches": 16,
-            "js_ms": 20,
-            "frame_ms": 56
-          }
-        }
-      },
-      {
-        "posts": 413,
-        "queries": {
-          "(empty)": {
-            "matches": 413,
-            "js_ms": 376.1,
-            "frame_ms": 1053.1
-          },
-          "python": {
-            "matches": 99,
-            "js_ms": 102.7,
-            "frame_ms": 266.1
-          },
-          "remote & ~us-based": {
-            "matches": 219,
-            "js_ms": 218.9,
-            "frame_ms": 576.8
-          },
-          "python | javascript & remote & ~us-based": {
-            "matches": 55,
-            "js_ms": 61.9,
-            "frame_ms": 161.5
-          },
-          "\"machine learning\"": {
-            "matches": 16,
-            "js_ms": 20.2,
-            "frame_ms": 50.2
-          }
-        }
-      },
-      {
-        "posts": 413,
-        "queries": {
-          "(empty)": {
-            "matches": 413,
-            "js_ms": 372.8,
-            "frame_ms": 1040.4
-          },
-          "python": {
-            "matches": 99,
-            "js_ms": 105.4,
-            "frame_ms": 280.3
-          },
-          "remote & ~us-based": {
-            "matches": 219,
-            "js_ms": 227.3,
-            "frame_ms": 566.9
-          },
-          "python | javascript & remote & ~us-based": {
-            "matches": 55,
-            "js_ms": 66.5,
-            "frame_ms": 166.4
-          },
-          "\"machine learning\"": {
-            "matches": 16,
-            "js_ms": 19.6,
-            "frame_ms": 60
+            "js_ms": 48.8,
+            "frame_ms": 99.3
           }
         }
       }

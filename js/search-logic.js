@@ -147,6 +147,68 @@ export function checkTerm(token, commentText, author, noteText) {
   return isNegated ? !termFound : termFound;
 }
 
+// Compiles tokens once into a matcher (commentText, author, noteText) => boolean.
+// Inputs must already be lowercase. Returns null when there is nothing to match, so callers
+// can skip the query step entirely. Same left-to-right semantics as evaluateQuery.
+export function compileQuery(tokens) {
+  if (!tokens || tokens.length === 0) return null;
+
+  const steps = tokens.map((token) => {
+    if (token === "&" || token === "|") return { op: token };
+
+    let isNegated = false;
+    let term = token;
+    if (term.startsWith("~")) {
+      isNegated = true;
+      term = term.substring(1);
+    }
+    let isPhrase = false;
+    if (term.startsWith('"') && term.endsWith('"')) {
+      isPhrase = true;
+      term = term.substring(1, term.length - 1);
+    }
+    if (!term) return { test: () => isNegated };
+
+    let regex = null;
+    if (!isPhrase) {
+      try {
+        regex = new RegExp(buildWordMatchPattern(term));
+      } catch (e) {
+        console.error(`Regex error for term "${term}":`, e);
+      }
+    }
+    const found = regex ? (s) => regex.test(s) : (s) => s.includes(term);
+    return {
+      test: (commentText, author, noteText) => {
+        const hit = found(commentText) || found(author) || found(noteText);
+        return isNegated ? !hit : hit;
+      },
+    };
+  });
+
+  return (commentText, author, noteText) => {
+    let currentResult = null;
+    let nextOperator = "&";
+    for (const step of steps) {
+      if (step.op) {
+        nextOperator = step.op;
+        continue;
+      }
+      const termResult = step.test(commentText, author, noteText);
+      if (currentResult === null) {
+        currentResult = termResult;
+      } else {
+        currentResult =
+          nextOperator === "|"
+            ? currentResult || termResult
+            : currentResult && termResult;
+        nextOperator = "&";
+      }
+    }
+    return currentResult === null ? true : currentResult;
+  };
+}
+
 // Updated evaluateQuery for standard boolean logic (left-to-right)
 export function evaluateQuery(commentText, author, noteText, tokens) {
   // Ensure inputs are lowercase

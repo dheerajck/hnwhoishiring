@@ -26,10 +26,14 @@ node compare.mjs baseline after
 
 Measured twice per run: **cold** (empty localStorage, first visit) and **warm** (returning user, the app's own cache populated).
 
-**Render** (413-post thread, median of 7): time for `renderJobs(allComments)` to return (`js_ms`) and until the next painted frame (`frame_ms`) for a set of representative search queries. `renderJobs` is the stable seam: whatever the internals become, it must re-render the list for the current search and filter state.
+**Render** (413-post thread, median of 7): time for `renderJobs(allComments)` to return (`js_ms`) and until the next painted frame (`frame_ms`) for a set of representative search queries. Each repeat first renders a different query so cached highlights cannot be reused. `renderJobs` is the stable seam: whatever the internals become, it must re-render the list for the current search and filter state.
 
 ## Network model
 
 Every request, local files included, is fulfilled after `RTT + bytes / bandwidth`. Default `--rtt 100 --mbps 5 --cpu 4` approximates a mid-range phone on an average connection. Third-party URLs are served from `fixtures/` (gzipped, recorded once); a request with no fixture is aborted and reported. Analytics is always blocked.
 
 Re-record only deliberately: it changes the data the baseline was measured against.
+
+## Functional smoke test
+
+`npm run smoke` drives the real app against the live API in headless Chromium and checks search, filters, exclude/restore, favorites, applied, keyboard navigation and thread switching. Exit code 1 on any failure.
