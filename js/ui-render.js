@@ -815,6 +815,8 @@ export function renderJobs(commentsToRender) {
 
 export function updateThemeIcon() {
   const themeToggle = document.getElementById("themeToggle");
+  // Boot path: tolerate HTML from a different deploy (GitHub Pages caches files for 10 min).
+  if (!themeToggle) return;
   const isDark = document.body.classList.contains("dark");
   themeToggle.innerHTML = icon(isDark ? "moon" : "sun");
   themeToggle.setAttribute(
