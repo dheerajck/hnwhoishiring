@@ -14,7 +14,7 @@ node compare.mjs baseline after
 
 ## What is measured
 
-**Startup** (median of 5 fresh browser contexts):
+**Startup** (median of 3 fresh browser contexts by default, `--runs N` to change):
 
 | metric | meaning |
 |---|---|

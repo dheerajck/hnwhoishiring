@@ -69,7 +69,10 @@ async function _fetchMockNewerComments(threadId) {
 async function _fetchApiThreadsForCategory(categoryConfig) {
   const { query, tags } = categoryConfig;
   const encodedQuery = encodeURIComponent(query);
-  const url = `${API_ENDPOINTS.SEARCH_BY_DATE}?query=${encodedQuery}&tags=${tags}`;
+  // Only objectID and title are used. Without these two params Algolia returns the full
+  // thread body (plus a highlighted copy of it) for every hit: ~300 KB across the three
+  // categories instead of a few KB.
+  const url = `${API_ENDPOINTS.SEARCH_BY_DATE}?query=${encodedQuery}&tags=${tags}&attributesToRetrieve=objectID,title&attributesToHighlight=none`;
 
   const response = await fetch(url);
   if (!response.ok) {

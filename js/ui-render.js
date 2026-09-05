@@ -23,6 +23,7 @@ import {
 } from "./search-logic.js";
 import { getYearAndMonthFromTitle } from "./utils.js";
 import { loadThread } from "./thread-manager.js";
+import DOMPurify from "./vendor/purify.js";
 
 export const highlightClass = "active";
 
@@ -612,11 +613,7 @@ export function renderJobs(commentsToRender) {
       postedTime = `${formattedDate} <span title="${d.toLocaleString()}">(${timeAgo})</span>`;
     }
 
-    let commentTextHTML = c.text || "[No comment text]";
-
-    if (window.DOMPurify) {
-      commentTextHTML = DOMPurify.sanitize(commentTextHTML);
-    }
+    let commentTextHTML = DOMPurify.sanitize(c.text || "[No comment text]");
 
     commentTextHTML = addTargetBlankToLinks(commentTextHTML);
     if (queryTokens.length > 0) {

@@ -17,7 +17,6 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
 const FIXTURES = path.join(__dirname, "fixtures");
 const INDEX_FILE = path.join(FIXTURES, "index.json");
 const RESULTS = path.join(__dirname, "results");
@@ -26,12 +25,14 @@ const RESULTS = path.join(__dirname, "results");
 const BIG_THREAD_ID = "46857488";
 
 const args = parseArgs(process.argv.slice(2));
+// --root lets you benchmark another checkout (e.g. a git worktree of an older commit).
+const ROOT = args.root ? path.resolve(String(args.root)) : path.resolve(__dirname, "..");
 const RECORD = !!args.record;
 const LABEL = args.label || (RECORD ? "record" : `run-${Date.now()}`);
 const RTT_MS = num(args.rtt, 100);
 const MBPS = num(args.mbps, 5);
 const CPU = num(args.cpu, 4);
-const RUNS = num(args.runs, 5);
+const RUNS = num(args.runs, 3);
 const HEADLESS = args.headed ? false : true;
 
 const RENDER_QUERIES = [
@@ -145,7 +146,7 @@ async function benchmark(browser, origin) {
 
   const cold = [];
   const warm = [];
-  let render = null;
+  const renders = [];
 
   for (let i = 0; i < RUNS; i++) {
     const context = await browser.newContext();
@@ -171,10 +172,7 @@ async function benchmark(browser, origin) {
     warm.push(await collectStartup(warmPage, netlog));
     await waitForLoaded(warmPage);
 
-    // Render benchmark once (deterministic; internal repeats).
-    if (render === null) {
-      render = await collectRender(warmPage);
-    }
+    renders.push(await collectRender(warmPage));
 
     await context.close();
     process.stdout.write(`run ${i + 1}/${RUNS} done\r`);
@@ -190,9 +188,9 @@ async function benchmark(browser, origin) {
       cold: summarizeStartup(cold),
       warm: summarizeStartup(warm),
     },
-    render,
+    render: summarizeRender(renders),
     missing_fixtures: [...missing],
-    raw: { cold, warm },
+    raw: { cold, warm, renders },
   };
 
   fs.mkdirSync(RESULTS, { recursive: true });
@@ -224,19 +222,22 @@ function attachNetwork(context, origin, index, fixtureCache, missing) {
       body = Buffer.from('{"hits":[],"nbHits":0,"page":0,"nbPages":0,"hitsPerPage":1000}');
       contentType = "application/json; charset=utf-8";
     } else {
-      const entry = index[url];
+      const entry = index[url] || findThreadListFixture(url, index);
       if (!entry) {
         missing.add(url);
         return route.abort();
       }
       if (!fixtureCache.has(url)) {
-        fixtureCache.set(url, zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, entry.file))));
+        let bytes = zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, entry.file)));
+        if (entry.attributesToRetrieve) bytes = projectHits(bytes, entry.attributesToRetrieve);
+        fixtureCache.set(url, bytes);
       }
       body = fixtureCache.get(url);
       contentType = entry.contentType;
     }
 
     const delay = RTT_MS + (body.length * 8) / (MBPS * 1000); // ms
+    if (process.env.BENCH_DEBUG) console.log(`  ${String(body.length).padStart(8)} B  ${Math.round(delay)} ms  ${url}`);
     log.requests.push({ url, bytes: body.length, start: Date.now(), delay });
     await sleep(delay);
     await route.fulfill({ status: 200, body, headers: { "content-type": contentType } });
@@ -250,11 +251,13 @@ function attachNetwork(context, origin, index, fixtureCache, missing) {
 async function collectStartup(page, netlog) {
   const t = await page.evaluate(async () => {
     const b = window.__bench;
-    while (b.firstCardAt === null) await new Promise((r) => setTimeout(r, 5));
+    while (b.firstCardAt === null || b.firstCardPaintedAt === null)
+      await new Promise((r) => setTimeout(r, 5));
     const nav = performance.getEntriesByType("navigation")[0];
     const fcp = performance.getEntriesByName("first-contentful-paint")[0];
     return {
       first_card_ms: b.firstCardAt,
+      first_card_painted_ms: b.firstCardPaintedAt,
       fcp_ms: fcp ? fcp.startTime : null,
       dcl_ms: nav ? nav.domContentLoadedEventEnd : null,
       first_card_wallclock: performance.timeOrigin + b.firstCardAt,
@@ -263,6 +266,7 @@ async function collectStartup(page, netlog) {
   const before = netlog.requests.filter((r) => r.start <= t.first_card_wallclock);
   return {
     first_card_ms: round(t.first_card_ms),
+    first_card_painted_ms: round(t.first_card_painted_ms),
     fcp_ms: t.fcp_ms === null ? null : round(t.fcp_ms),
     dcl_ms: t.dcl_ms === null ? null : round(t.dcl_ms),
     requests_before_first_card: before.length,
@@ -317,11 +321,15 @@ async function collectRender(page) {
 
 async function installObserver(page) {
   await page.addInitScript(() => {
-    window.__bench = { firstCardAt: null };
+    window.__bench = { firstCardAt: null, firstCardPaintedAt: null };
     const check = () => {
       if (window.__bench.firstCardAt === null && document.querySelector("#jobs .job-card")) {
         window.__bench.firstCardAt = performance.now();
         obs.disconnect();
+        // rAF fires just before the next paint; a 0ms timeout after it lands just after.
+        requestAnimationFrame(() =>
+          setTimeout(() => (window.__bench.firstCardPaintedAt = performance.now()), 0)
+        );
       }
     };
     const obs = new MutationObserver(check);
@@ -357,15 +365,27 @@ function summarizeStartup(runs) {
   return out;
 }
 
+function summarizeRender(renders) {
+  const out = { posts: renders[0].posts, queries: {} };
+  for (const q of Object.keys(renders[0].queries)) {
+    out.queries[q] = {
+      matches: renders[0].queries[q].matches,
+      js_ms: median(renders.map((r) => r.queries[q].js_ms)),
+      frame_ms: median(renders.map((r) => r.queries[q].frame_ms)),
+    };
+  }
+  return out;
+}
+
 function printReport(r) {
   console.log(`\n== startup (median of ${r.config.runs}) ==`);
   const rows = [["", "cold (first visit)", "warm (returning)"]];
-  for (const k of ["first_card_ms", "fcp_ms", "dcl_ms", "requests_before_first_card", "kb_before_first_card"]) {
+  for (const k of ["first_card_ms", "first_card_painted_ms", "fcp_ms", "dcl_ms", "requests_before_first_card", "kb_before_first_card"]) {
     rows.push([k, fmt(r.startup.cold[k]), fmt(r.startup.warm[k])]);
   }
   table(rows);
 
-  console.log(`\n== render (${r.render.posts} posts loaded, median of 7) ==`);
+  console.log(`\n== render (${r.render.posts} posts loaded, median of 7 x ${r.config.runs} runs) ==`);
   const rrows = [["query", "matches", "js ms", "to-frame ms"]];
   for (const [q, v] of Object.entries(r.render.queries)) {
     rrows.push([q, String(v.matches), fmt(v.js_ms), fmt(v.frame_ms)]);
@@ -404,6 +424,39 @@ function localPath(url, origin) {
   const full = path.join(ROOT, p);
   if (!full.startsWith(ROOT) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) return null;
   return full;
+}
+
+// A thread-list request whose exact URL was not recorded (e.g. the app added
+// attributesToRetrieve) is served from the fixture with the same query+tags, and the
+// hits are projected to the requested attributes the way Algolia would do it.
+function findThreadListFixture(url, index) {
+  const u = new URL(url);
+  if (u.hostname !== "hn.algolia.com" || !u.pathname.endsWith("/search_by_date")) return null;
+  const q = u.searchParams.get("query");
+  const tags = u.searchParams.get("tags");
+  if (!q || !tags) return null;
+  for (const [recordedUrl, entry] of Object.entries(index)) {
+    const r = new URL(recordedUrl);
+    if (r.hostname === u.hostname && r.searchParams.get("query") === q && r.searchParams.get("tags") === tags) {
+      const attrs = u.searchParams.get("attributesToRetrieve");
+      // The HN proxy keeps _highlightResult unless attributesToHighlight is "none" or "[]"
+      // (an empty value is ignored; a list keeps highlights for those attributes).
+      const highlight = u.searchParams.get("attributesToHighlight");
+      const keepHighlight = !(highlight === "none" || highlight === "[]");
+      if (!attrs) return entry;
+      const keep = attrs.split(",");
+      if (keepHighlight) keep.push("_highlightResult");
+      return { ...entry, attributesToRetrieve: keep };
+    }
+  }
+  return null;
+}
+
+function projectHits(bytes, attrs) {
+  const data = JSON.parse(bytes.toString("utf8"));
+  const keep = new Set([...attrs, "objectID"]);
+  data.hits = data.hits.map((h) => Object.fromEntries(Object.entries(h).filter(([k]) => keep.has(k))));
+  return Buffer.from(JSON.stringify(data));
 }
 
 function isNewerCommentsPoll(url) {

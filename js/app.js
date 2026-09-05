@@ -103,6 +103,15 @@ async function scheduleResumeRefresh(source) {
   return resumeRefreshPromise;
 }
 
+// Let the browser paint the header and "Loading..." shell before the (possibly heavy)
+// synchronous render of cached jobs. rAF runs just before the next paint, the 0ms timeout
+// lands just after it.
+function yieldToFirstPaint() {
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => setTimeout(resolve, 0))
+  );
+}
+
 async function initializeApp() {
   applyInitialUrlState();
   initUIEventListeners();
@@ -111,6 +120,7 @@ async function initializeApp() {
   appBootInProgress = true;
 
   try {
+    await yieldToFirstPaint();
     await fetchAndStoreThreads();
   } finally {
     appBootInProgress = false;

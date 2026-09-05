@@ -1,0 +1,206 @@
+{
+  "label": "startup-chain",
+  "at": "2026-09-05T05:21:14.816Z",
+  "git": "refs/heads/perf-startup-and-render-benchmark",
+  "config": {
+    "rtt_ms": 100,
+    "mbps": 5,
+    "cpu_throttle": 4,
+    "runs": 3
+  },
+  "startup": {
+    "cold": {
+      "first_card_ms": 1798.5,
+      "first_card_painted_ms": 2229.3,
+      "fcp_ms": 448,
+      "dcl_ms": 408.1,
+      "requests_before_first_card": 21,
+      "kb_before_first_card": 934.7
+    },
+    "warm": {
+      "first_card_ms": 778.7,
+      "first_card_painted_ms": 1211.7,
+      "fcp_ms": 444,
+      "dcl_ms": 429.6,
+      "requests_before_first_card": 18,
+      "kb_before_first_card": 505.9
+    }
+  },
+  "render": {
+    "posts": 413,
+    "queries": {
+      "(empty)": {
+        "matches": 413,
+        "js_ms": 400,
+        "frame_ms": 1072.2
+      },
+      "python": {
+        "matches": 99,
+        "js_ms": 108.9,
+        "frame_ms": 271
+      },
+      "remote & ~us-based": {
+        "matches": 219,
+        "js_ms": 235.5,
+        "frame_ms": 585.1
+      },
+      "python | javascript & remote & ~us-based": {
+        "matches": 55,
+        "js_ms": 67.4,
+        "frame_ms": 181.7
+      },
+      "\"machine learning\"": {
+        "matches": 16,
+        "js_ms": 21.1,
+        "frame_ms": 62
+      }
+    }
+  },
+  "missing_fixtures": [],
+  "raw": {
+    "cold": [
+      {
+        "first_card_ms": 1809.5,
+        "first_card_painted_ms": 2235.3,
+        "fcp_ms": 456,
+        "dcl_ms": 410.8,
+        "requests_before_first_card": 21,
+        "kb_before_first_card": 934.7
+      },
+      {
+        "first_card_ms": 1797.8,
+        "first_card_painted_ms": 2229.3,
+        "fcp_ms": 448,
+        "dcl_ms": 408.1,
+        "requests_before_first_card": 21,
+        "kb_before_first_card": 934.7
+      },
+      {
+        "first_card_ms": 1798.5,
+        "first_card_painted_ms": 2226.8,
+        "fcp_ms": 448,
+        "dcl_ms": 406.6,
+        "requests_before_first_card": 21,
+        "kb_before_first_card": 934.7
+      }
+    ],
+    "warm": [
+      {
+        "first_card_ms": 774.8,
+        "first_card_painted_ms": 1211.7,
+        "fcp_ms": 436,
+        "dcl_ms": 429.6,
+        "requests_before_first_card": 18,
+        "kb_before_first_card": 505.9
+      },
+      {
+        "first_card_ms": 778.7,
+        "first_card_painted_ms": 1208.9,
+        "fcp_ms": 444,
+        "dcl_ms": 415.9,
+        "requests_before_first_card": 18,
+        "kb_before_first_card": 505.9
+      },
+      {
+        "first_card_ms": 794.5,
+        "first_card_painted_ms": 1240.2,
+        "fcp_ms": 444,
+        "dcl_ms": 441.7,
+        "requests_before_first_card": 17,
+        "kb_before_first_card": 505.9
+      }
+    ],
+    "renders": [
+      {
+        "posts": 413,
+        "queries": {
+          "(empty)": {
+            "matches": 413,
+            "js_ms": 386.1,
+            "frame_ms": 1061.5
+          },
+          "python": {
+            "matches": 99,
+            "js_ms": 107.8,
+            "frame_ms": 271
+          },
+          "remote & ~us-based": {
+            "matches": 219,
+            "js_ms": 236.8,
+            "frame_ms": 580.4
+          },
+          "python | javascript & remote & ~us-based": {
+            "matches": 55,
+            "js_ms": 67.4,
+            "frame_ms": 182.8
+          },
+          "\"machine learning\"": {
+            "matches": 16,
+            "js_ms": 21.1,
+            "frame_ms": 59.2
+          }
+        }
+      },
+      {
+        "posts": 413,
+        "queries": {
+          "(empty)": {
+            "matches": 413,
+            "js_ms": 400,
+            "frame_ms": 1072.2
+          },
+          "python": {
+            "matches": 99,
+            "js_ms": 108.9,
+            "frame_ms": 269.4
+          },
+          "remote & ~us-based": {
+            "matches": 219,
+            "js_ms": 235.5,
+            "frame_ms": 598.1
+          },
+          "python | javascript & remote & ~us-based": {
+            "matches": 55,
+            "js_ms": 67.9,
+            "frame_ms": 181.7
+          },
+          "\"machine learning\"": {
+            "matches": 16,
+            "js_ms": 21,
+            "frame_ms": 62
+          }
+        }
+      },
+      {
+        "posts": 413,
+        "queries": {
+          "(empty)": {
+            "matches": 413,
+            "js_ms": 400.1,
+            "frame_ms": 1072.9
+          },
+          "python": {
+            "matches": 99,
+            "js_ms": 112.3,
+            "frame_ms": 281.6
+          },
+          "remote & ~us-based": {
+            "matches": 219,
+            "js_ms": 235.5,
+            "frame_ms": 585.1
+          },
+          "python | javascript & remote & ~us-based": {
+            "matches": 55,
+            "js_ms": 67.3,
+            "frame_ms": 181.7
+          },
+          "\"machine learning\"": {
+            "matches": 16,
+            "js_ms": 21.5,
+            "frame_ms": 62.4
+          }
+        }
+      }
+    ]
+  }
+}
