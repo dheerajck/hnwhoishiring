@@ -25,6 +25,7 @@ import {
 import { getYearAndMonthFromTitle } from "./utils.js";
 import { loadThread } from "./thread-manager.js";
 import DOMPurify from "./vendor/purify.js";
+import { icon } from "./icons.js";
 
 export const highlightClass = "active";
 
@@ -220,7 +221,7 @@ export function updateJobCardInPlace(jobId, appliedStatus) {
       statusDiv.innerHTML = `
                 <span class="badge badge-applied">Applied</span>
                 <div class="meta">
-                    <i class="far fa-calendar"></i> ${new Date(
+                    ${icon("calendar")} ${new Date(
                       appliedStatus
                     ).toLocaleString("en-US", {
                       month: "short",
@@ -250,14 +251,14 @@ export function updateJobCardInPlace(jobId, appliedStatus) {
       unapplyBtn.className = "btn-unapply";
       unapplyBtn.setAttribute("data-action", "unapply");
       unapplyBtn.innerHTML =
-        '<i class="fas fa-times" aria-hidden="true"></i> Remove Applied Status';
+        `${icon("xmark")} Remove Applied Status`;
       actionsDiv.appendChild(unapplyBtn);
     } else {
       const applyBtn = document.createElement("button");
       applyBtn.className = "job-action-button btn-apply";
       applyBtn.setAttribute("data-action", "apply");
       applyBtn.innerHTML =
-        '<i class="fas fa-check" aria-hidden="true"></i> Mark as Applied';
+        `${icon("check")} Mark as Applied`;
       actionsDiv.appendChild(applyBtn);
     }
   }
@@ -341,7 +342,7 @@ export function renderCategorySwitcher() {
         } else {
           document.getElementById(
             "jobs"
-          ).innerHTML = `<div class="loading"><i class="fas fa-info-circle"></i> No threads found for this category.</div>`;
+          ).innerHTML = `<div class="loading">${icon("info-circle")} No threads found for this category.</div>`;
           // setCurrentThreadId(null); // Handled by loadThread or its absence
           setLoadTimeInfo("");
           clearLastRefreshedInfo();
@@ -612,7 +613,7 @@ function buildCard(c, jobId) {
                         ${
                           appliedStatus
                             ? `<span class="badge badge-applied">Applied</span>
-                            <div class="meta"><i class="far fa-calendar"></i> ${formatDateTime(
+                            <div class="meta">${icon("calendar")} ${formatDateTime(
                               appliedStatus
                             )}</div>`
                             : ""
@@ -627,14 +628,14 @@ function buildCard(c, jobId) {
                 <div class="job-title-container">
                     <button class="action-btn star-btn${
                       isFav ? "" : " inactive"
-                    }" data-action="star" title="Add to Favorite" aria-label="Star job"><i class="fas fa-star"></i></button>
+                    }" data-action="star" title="Add to Favorite" aria-label="Star job">${icon("star")}</button>
                     <div class="job-title"><a href="${hnLink}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${jobTitle}</a></div>
                 </div>
                 <div class="job-author-container">
                     <div class="job-author">
                         <span class="job-author-main">Posted by: ${authorName}</span>
-                        <a href="${hnLink}" class="action-btn" target="_blank" rel="noopener noreferrer" title="Open on Hacker News" aria-label="Open on Hacker News"><i class="fas fa-external-link-alt"></i></a>
-                        <button class="action-btn" data-action="copy-link" title="Copy link" aria-label="Copy link"><i class="fas fa-copy"></i></button>
+                        <a href="${hnLink}" class="action-btn" target="_blank" rel="noopener noreferrer" title="Open on Hacker News" aria-label="Open on Hacker News">${icon("external-link")}</a>
+                        <button class="action-btn" data-action="copy-link" title="Copy link" aria-label="Copy link">${icon("copy")}</button>
                     </div>
                 </div>
             </div>
@@ -645,12 +646,12 @@ function buildCard(c, jobId) {
                 <textarea class="note" placeholder="Add notes about this position..."></textarea>
             </div>
             <div class="job-actions">
-                <button class="job-action-button btn-remove btn-remove-margin" data-action="remove" title="Exclude"><i class="fas fa-xmark"></i> Exclude</button>
-                <button class="job-action-button btn-save-note" data-action="save-note" title="Update Note"><i class="fas fa-edit"></i> Update Note</button>
+                <button class="job-action-button btn-remove btn-remove-margin" data-action="remove" title="Exclude">${icon("xmark")} Exclude</button>
+                <button class="job-action-button btn-save-note" data-action="save-note" title="Update Note">${icon("edit")} Update Note</button>
                 ${
                   appliedStatus
-                    ? `<button class="btn-unapply" data-action="unapply"><i class="fas fa-times"></i> Remove Applied Status</button>`
-                    : `<button class="job-action-button btn-apply" data-action="apply"><i class="fas fa-check"></i> Mark as Applied</button>`
+                    ? `<button class="btn-unapply" data-action="unapply">${icon("xmark")} Remove Applied Status</button>`
+                    : `<button class="job-action-button btn-apply" data-action="apply">${icon("check")} Mark as Applied</button>`
                 }
             </div>
         `;
@@ -681,12 +682,12 @@ function applyExcludeMode(entry, showHidden) {
     btn.className = "job-action-button btn-unhide btn-remove-margin";
     btn.dataset.action = "unhide";
     btn.title = "Restore";
-    btn.innerHTML = '<i class="fas fa-undo"></i> Restore';
+    btn.innerHTML = `${icon("undo")} Restore`;
   } else {
     btn.className = "job-action-button btn-remove btn-remove-margin";
     btn.dataset.action = "remove";
     btn.title = "Exclude";
-    btn.innerHTML = '<i class="fas fa-xmark"></i> Exclude';
+    btn.innerHTML = `${icon("xmark")} Exclude`;
   }
   entry.excludeMode = mode;
 }
@@ -703,7 +704,7 @@ function getEmptyStateEl(container) {
   if (!cardCache.emptyEl || !container.contains(cardCache.emptyEl)) {
     const el = document.createElement("div");
     el.className = "loading fade-in";
-    el.innerHTML = '<i class="far fa-meh"></i> No matches found!';
+    el.innerHTML = `${icon("meh")} No matches found!`;
     el.hidden = true;
     container.prepend(el);
     cardCache.emptyEl = el;
@@ -814,12 +815,10 @@ export function renderJobs(commentsToRender) {
 
 export function updateThemeIcon() {
   const themeToggle = document.getElementById("themeToggle");
-  const icon = themeToggle.querySelector("i");
-  if (document.body.classList.contains("dark")) {
-    icon.className = "fas fa-moon";
-    themeToggle.setAttribute("aria-label", "Switch to light mode");
-  } else {
-    icon.className = "fas fa-sun";
-    themeToggle.setAttribute("aria-label", "Switch to dark mode");
-  }
+  const isDark = document.body.classList.contains("dark");
+  themeToggle.innerHTML = icon(isDark ? "moon" : "sun");
+  themeToggle.setAttribute(
+    "aria-label",
+    isDark ? "Switch to light mode" : "Switch to dark mode"
+  );
 }

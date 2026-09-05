@@ -172,6 +172,16 @@ header {
   }
 }
 
+/* Inline SVG icons (sprite in index.html). Sized and coloured like the text around them. */
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  vertical-align: -0.125em;
+  overflow: visible;
+}
+
 button,
 .btn {
   padding: 0.6rem 0.9rem;
@@ -741,15 +751,15 @@ hr.category-divider {
   text-decoration: none; /* Remove underline */
 }
 
-.icon-link-button i {
+.icon-link-button .icon {
   transition: transform 0.4s ease; /* Add transition for the icon */
 }
 
-body:not(.dark) .icon-link-button i.fa-sun {
+body:not(.dark) .icon-link-button .icon-sun {
   transform: rotate(90deg);
 }
 
-/* body.dark .icon-link-button i.fa-sun {
+/* body.dark .icon-link-button .icon-sun {
     transform: rotate(90deg);
 } */
 
@@ -759,12 +769,12 @@ body:not(.dark) .icon-link-button i.fa-sun {
   font-size: 1.2rem;
 }
 
-.loading i.fa-circle-notch {
+.loading .icon-circle-notch {
   animation: spin 1s linear infinite;
   margin-right: 0.5rem;
 }
 
-.loading i:not(.fa-circle-notch) {
+.loading .icon:not(.icon-circle-notch) {
   margin-right: 0.5rem;
 }
 
@@ -977,7 +987,7 @@ body:not(.dark) .icon-link-button i.fa-sun {
   }
 }
 
-.star-btn i {
+.star-btn .icon {
   background: transparent;
   border: none;
   color: gold;
@@ -987,7 +997,7 @@ body:not(.dark) .icon-link-button i.fa-sun {
   line-height: 1;
   transition: color 0.2s;
 }
-.star-btn.inactive i {
+.star-btn.inactive .icon {
   color: #888;
 }
 .copy-btn {
@@ -1120,7 +1130,7 @@ border: 1px solid yellow !important;
   gap: 0.5em;
 }
 
-.help-modal-btn i {
+.help-modal-btn .icon {
   font-size: 1rem;
   line-height: 1;
   vertical-align: middle;

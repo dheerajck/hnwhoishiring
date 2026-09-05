@@ -12,6 +12,7 @@ import {
 } from "./state.js";
 
 import { getCache, setCache, minimizeCommentObject } from "./cache.js";
+import { icon } from "./icons.js";
 
 import {
   fetchLatestThreadListFromApi,
@@ -70,13 +71,13 @@ function setThreadButtonsActive(threadId) {
 
 function showBlockingThreadLoader() {
   getJobsContainer().innerHTML =
-    '<div class="loading"><i class="fas fa-circle-notch"></i> Loading...</div>';
+    `<div class="loading">${icon("circle-notch")} Loading...</div>`;
   setLoadTimeInfo("");
   clearLastRefreshedInfo();
 }
 
 function showNoThreadsMessage(message) {
-  getJobsContainer().innerHTML = `<div class="loading"><i class="fas fa-info-circle"></i> ${message}</div>`;
+  getJobsContainer().innerHTML = `<div class="loading">${icon("info-circle")} ${message}</div>`;
   setLoadTimeInfo("");
   clearLastRefreshedInfo();
 }
@@ -281,7 +282,7 @@ export async function loadThread(id, options = {}) {
 
     getJobsContainer().innerHTML = `
           <div class="loading">
-            <i class="fas fa-exclamation-circle"></i>
+            ${icon("exclamation-circle")}
             Failed to load thread details for ${requestedIdForThisCall}. ${
       error.message || ""
     }
