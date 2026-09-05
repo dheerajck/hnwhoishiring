@@ -27,6 +27,7 @@ import {
 
 import { removeLocalStorageKeysWithPrefix } from "./cache.js";
 import { debounce } from "./utils.js";
+import { icon } from "./icons.js";
 
 import {
   renderJobs,
@@ -241,11 +242,11 @@ const FILTER_MAP = {
 
 let filterButtons = [];
 
-function createFilterButton(id, iconClass, text, className = "filter-btn") {
+function createFilterButton(id, iconName, text, className = "filter-btn") {
   const button = document.createElement("button");
   button.id = id;
   button.className = className;
-  button.innerHTML = `<i class="${iconClass}"></i> ${text}`;
+  button.innerHTML = `${icon(iconName)} ${text}`;
   return button;
 }
 
@@ -331,32 +332,32 @@ function setupFilterButtons() {
   // Create filter buttons
   const favBtn = createFilterButton(
     "showFavorites",
-    "fas fa-star",
+    "star",
     "Favorites"
   );
   const notesBtn = createFilterButton(
     "showNotes",
-    "fas fa-sticky-note",
+    "sticky-note",
     "Show Notes"
   );
   const appliedBtn = createFilterButton(
     "showApplied",
-    "fas fa-check",
+    "check",
     "Show Applied"
   );
   const hideAppliedBtn = createFilterButton(
     "hideApplied",
-    "fas fa-eye-slash",
+    "eye-slash",
     "Hide Applied"
   );
   const showHiddenBtn = createFilterButton(
     "showHidden",
-    "fas fa-xmark",
+    "xmark",
     "Show Excluded"
   );
   const resetBtn = createFilterButton(
     "resetDefaultsBtn",
-    "fas fa-trash-alt",
+    "trash",
     "Reset Everything",
     "filter-btn reset-btn"
   );
